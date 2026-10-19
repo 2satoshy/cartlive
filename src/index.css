@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/* Hide scrollbar globally across Chrome, Safari, Firefox, Edge while maintaining scroll functionality */
+html, body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE & Edge */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+/* Utility class for containers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+@keyframes wobble-tilt {
+  0% { transform: scale(1) rotate(0deg); }
+  15% { transform: scale(1.18) rotate(-14deg); }
+  30% { transform: scale(1.18) rotate(14deg); }
+  45% { transform: scale(1.12) rotate(-9deg); }
+  60% { transform: scale(1.12) rotate(9deg); }
+  75% { transform: scale(1.05) rotate(-4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.animate-wobble {
+  animation: wobble-tilt 0.65s ease-in-out;
+}

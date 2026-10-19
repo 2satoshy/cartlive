@@ -1,0 +1,6 @@
+{
+  "name": "PnP",
+  "description": "Live video call shopping-first collaborative cross-border grocery app for South Africa & Zimbabwe powered by PnP (TM Pick n Pay) with live multi-participant video, synced family cart, Gemini voice AI, and low-data WhatsApp fallback.",
+  "requestFramePermissions": ["microphone", "camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

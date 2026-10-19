@@ -1,0 +1,82 @@
+export const STORES_BY_REGION: Record<string, string[]> = {
+  'Harare Region': [
+    'PICK n PAY BORROWDALE',
+    'PICK n PAY MSASA',
+    'PICK n PAY KAMFINSA',
+    'PICK n PAY CHIREMBA',
+    'PICK n PAY AVONDALE',
+    'PICK n PAY JOINA CITY',
+    'PICK n PAY NEWLANDS',
+    'TM PICK n PAY ORR STREET',
+    'TM PICK n PAY STRATHAVEN',
+    'TM PICK n PAY MAKONI',
+    'TM PICK n PAY BUDIRIRO',
+    'TM PICK n PAY KENNETH KAUNDA',
+    'TM PICK n PAY RUWA',
+    'PICK n PAY ARUNDEL',
+    'PICK n PAY WESTGATE',
+    'PICK n PAY SAM NUJOMA',
+    'PICK n PAY ASPINDALE',
+    'TM PICK n PAY MACHIPISA',
+    'TM PICK n PAY CHADCOMBE',
+    'TM PICK n PAY ZENGEZA',
+    'PICK n PAY HIGHLAND PARK',
+    'PICK n PAY MADOKERO',
+    'PICK n PAY SIMON MAZORODZE',
+    'PICK n PAY HOGERTY HILL',
+  ],
+  'Bulawayo Region': [
+    'TM PICK n PAY COWDRAY PARK',
+    'TM PICK n PAY JASON MOYO',
+    'PICK n PAY ASCOT',
+    'PICK n PAY HYPER',
+    'TM PICK n PAY NORTHEND',
+    'PICK n PAY BRADFIELD',
+    'TM PICK n PAY LOBENGULA',
+    'TM PICK n PAY FIFE ST',
+  ],
+  'Manicaland Region': [
+    'TM PICK n PAY RUSAPE',
+    'PICK n PAY MUTARE',
+    'TM PICK n PAY CHIPINGE',
+    'PICK n PAY SAKUBVA',
+  ],
+  'Mashonaland Central Region': [
+    'TM PICK n PAY BINDURA',
+  ],
+  'Mashonaland East Region': [
+    'TM PICK n PAY MUTOKO',
+    'PICK n PAY MARONDERA',
+    'PICK n PAY CHIVHU',
+  ],
+  'Mashonaland West Region': [
+    'TM PICK n PAY KADOMA',
+    'TM PICK n PAY CHINHOYI',
+    'TM PICK n PAY KARIBA',
+    'TM PICK n PAY CHINHOYI SOUTH',
+    'TM PICK n PAY KAROI',
+    'TM PICK n PAY NORTON',
+  ],
+  'Masvingo Region': [
+    'TM PICK n PAY CHIREDZI',
+    'TM PICK n PAY TRIANGLE',
+    'PICK n PAY MASVINGO',
+  ],
+  'Matabeleland North Region': [
+    'PICK n PAY VICTORIA FALLS',
+    'PICK n PAY HWANGE',
+  ],
+  'Matabeleland South Region': [
+    'PICK n PAY GWANDA',
+  ],
+  'Midlands Region': [
+    'PICK n PAY GWERU MEGAWATT',
+    'TM PICK n PAY ZVISHAVANE',
+    'PICK n PAY GWERU',
+    'PICK n PAY KWEKWE MAIN ST',
+    'PICK n PAY SHURUGWI',
+  ],
+};
+
+export const DEFAULT_REGION = 'Harare Region';
+export const DEFAULT_STORE = 'PICK n PAY MSASA';
