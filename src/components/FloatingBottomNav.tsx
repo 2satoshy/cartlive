@@ -26,6 +26,7 @@ interface FloatingBottomNavProps {
   onOpenSmartBasket?: () => void;
   onStartLiveCall?: () => void;
   isBasketTilting?: boolean;
+  hideVerticalMenuExceptCart?: boolean;
 }
 
 export const FloatingBottomNav: React.FC<FloatingBottomNavProps> = ({
@@ -37,6 +38,7 @@ export const FloatingBottomNav: React.FC<FloatingBottomNavProps> = ({
   onOpenSmartBasket,
   onStartLiveCall,
   isBasketTilting,
+  hideVerticalMenuExceptCart,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -53,7 +55,6 @@ export const FloatingBottomNav: React.FC<FloatingBottomNavProps> = ({
     },
     { id: 'home', label: 'Catalog', icon: <Store className="w-5 h-5" /> },
     { id: 'discover', label: 'Discover', icon: <Compass className="w-5 h-5" /> },
-    { id: 'previouslyBought', label: 'Bought', icon: <Clock className="w-5 h-5" /> },
     { id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
     { id: 'cart', label: 'Cart', icon: <ShoppingCart className="w-5 h-5" />, badge: cartCount },
   ];
@@ -63,7 +64,11 @@ export const FloatingBottomNav: React.FC<FloatingBottomNavProps> = ({
       {/* TikTok-Style Vertical Floating Action Icons (Bottom Right Stack) */}
       <div 
         className={`fixed right-3 sm:right-5 z-[999999] flex flex-col items-end gap-2.5 transition-all duration-300 pointer-events-auto ${
-          isCollapsed ? 'bottom-20 sm:bottom-20' : 'bottom-[5.5rem] sm:bottom-[5.75rem]'
+          hideVerticalMenuExceptCart
+            ? 'bottom-52 sm:bottom-56'
+            : isCollapsed
+            ? 'bottom-20 sm:bottom-20'
+            : 'bottom-[5.5rem] sm:bottom-[5.75rem]'
         }`}
       >
         {/* Floating Cart Button Icon (Positioned directly ABOVE Start Live Call Button) */}
@@ -90,7 +95,7 @@ export const FloatingBottomNav: React.FC<FloatingBottomNavProps> = ({
         </button>
 
         {/* Start Live Video Call Button (Below Floating Cart) */}
-        {onStartLiveCall && (
+        {!hideVerticalMenuExceptCart && onStartLiveCall && (
           <button
             onClick={onStartLiveCall}
             className="group relative bg-gradient-to-tr from-[#941135] via-[#C51D4A] to-[#e02657] hover:from-[#7d0d2c] hover:to-[#c51d4a] text-white p-3 rounded-full shadow-2xl border-2 border-[#FFB81C] flex items-center justify-center transition-all transform active:scale-90 hover:scale-110"
@@ -109,7 +114,7 @@ export const FloatingBottomNav: React.FC<FloatingBottomNavProps> = ({
         )}
 
         {/* 1. Smart Basket Action Button (Top of Stack) */}
-        {onOpenSmartBasket && (
+        {!hideVerticalMenuExceptCart && onOpenSmartBasket && (
           <button
             onClick={onOpenSmartBasket}
             className={`group relative bg-gradient-to-tr from-[#0284c7] via-[#0d9488] to-[#14b8a6] hover:from-[#0369a1] hover:to-[#0f766e] text-white p-3 rounded-full shadow-2xl border-2 border-cyan-300 flex items-center justify-center transition-all transform active:scale-90 hover:scale-110 ${
@@ -130,7 +135,7 @@ export const FloatingBottomNav: React.FC<FloatingBottomNavProps> = ({
         )}
 
         {/* 3. Voice AI Assistant Button (Bottom of Stack) */}
-        {onOpenVoiceAI && (
+        {!hideVerticalMenuExceptCart && onOpenVoiceAI && (
           <button
             onClick={onOpenVoiceAI}
             className="group relative bg-gradient-to-tr from-[#1a115e] via-[#241a7d] to-[#298bf5] hover:from-[#241a7d] hover:to-[#60a5fa] text-[#ffb81c] p-3 rounded-full shadow-2xl border-2 border-[#ffb81c] flex items-center justify-center transition-all transform active:scale-90 hover:scale-110"
@@ -150,7 +155,7 @@ export const FloatingBottomNav: React.FC<FloatingBottomNavProps> = ({
       </div>
 
       {/* Floating Bottom Navigation Bar (Fixed to Viewport Bottom Screen) */}
-      {isCollapsed ? (
+      {!hideVerticalMenuExceptCart && (isCollapsed ? (
         /* Collapsed Circular Action Button matching the icon stack */
         <div className="fixed bottom-3 right-3 sm:right-5 z-[999999] pointer-events-auto">
           <button
@@ -227,7 +232,7 @@ export const FloatingBottomNav: React.FC<FloatingBottomNavProps> = ({
             </button>
           </div>
         </div>
-      )}
+      ))}
     </>
   );
 };

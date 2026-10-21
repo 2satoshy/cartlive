@@ -53,6 +53,25 @@ export default function App() {
   const [lowDataMode, setLowDataMode] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<NavTab>('livecall');
   const [isLiveCallOngoing, setIsLiveCallOngoing] = useState<boolean>(false);
+  const [isLiveFullscreen, setIsLiveFullscreen] = useState<boolean>(false);
+
+  // Personal Cart (for viewers & participants to have their own individual cart)
+  const [personalCart, setPersonalCart] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('pnp_personal_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pnp_personal_cart', JSON.stringify(personalCart));
+    } catch {
+      // ignore
+    }
+  }, [personalCart]);
 
   // Personal Cart (for viewers & participants to have their own individual cart)
   const [personalCart, setPersonalCart] = useState<CartItem[]>(() => {
@@ -513,6 +532,7 @@ export default function App() {
               isLiveCallOngoing={isLiveCallOngoing}
               onOpenCatalog={() => setActiveTab('home')}
               onOpenWhatsAppSim={() => setShowWhatsAppSim(true)}
+              onFullscreenChange={setIsLiveFullscreen}
             />
           </div>
         )}
@@ -642,6 +662,7 @@ export default function App() {
           setActiveTab('livecall');
         }}
         isBasketTilting={isBasketTilting}
+        hideVerticalMenuExceptCart={isLiveFullscreen}
       />
 
       {/* Modals */}

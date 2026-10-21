@@ -43,6 +43,7 @@ import {
   Snowflake,
   Pin,
   ArrowRight,
+  ArrowLeft,
   ExternalLink,
   FolderUp,
   Sliders,
@@ -86,6 +87,7 @@ interface LiveCallShoppingViewProps {
   onLeaveCall?: () => void; // User leaves call while others carry on
   onOpenWhatsAppSim?: () => void;
   onOpenCatalog?: () => void; // Open catalog to browse more products
+  onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
 export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
@@ -106,7 +108,8 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
   isLiveCallOngoing = false,
   onLeaveCall,
   onOpenWhatsAppSim,
-  onOpenCatalog
+  onOpenCatalog,
+  onFullscreenChange
 }) => {
   // Suggestion index state for Live Shopping recommendations
   const [suggestionIndex, setSuggestionIndex] = useState<number>(0);
@@ -453,6 +456,7 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
   // Live Menu & AI Conversion State
   const [liveMenu, setLiveMenu] = useState<LiveMenuUpload | null>(null);
   const [showMenuUploadModal, setShowMenuUploadModal] = useState<boolean>(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState<boolean>(false);
   const [isConvertingMenu, setIsConvertingMenu] = useState<boolean>(false);
   const [uploadTab, setUploadTab] = useState<'preset' | 'file' | 'text'>('preset');
   const [menuTextInput, setMenuTextInput] = useState<string>('');
@@ -478,6 +482,12 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
   const [showPersonalCartDrawer, setShowPersonalCartDrawer] = useState<boolean>(false);
   const [activeCartViewMode, setActiveCartViewMode] = useState<'family' | 'personal'>('family');
   const [personalCheckoutDone, setPersonalCheckoutDone] = useState<boolean>(false);
+  
+  // Poll States
+  const [activePoll, setActivePoll] = useState<{ id: string; question: string; options: { label: string; votes: number }[] } | null>(null);
+  const [showPollModal, setShowPollModal] = useState<boolean>(false);
+  const [newPollQuestion, setNewPollQuestion] = useState<string>('');
+  const [newPollOptions, setNewPollOptions] = useState<string>('Product A,Product B');
 
   // Swipable Hero Live Call Preview Card State
   const [activeHeroSlideIndex, setActiveHeroSlideIndex] = useState<number>(0);
@@ -490,6 +500,90 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
   const [isHeroVideoFrozen, setIsHeroVideoFrozen] = useState<boolean>(false);
   const [isExpandedVideoFrozen, setIsExpandedVideoFrozen] = useState<boolean>(false);
   const [isLiveCallVideoFrozen, setIsLiveCallVideoFrozen] = useState<boolean>(false);
+  // Controls vertical menu visibility on single click in full screen video
+  const [isVerticalMenuVisible, setIsVerticalMenuVisible] = useState<boolean>(false);
+
+  // Real-Time Product Tagging & Host Mention Spotlight State
+  const [activeMentionedProduct, setActiveMentionedProduct] = useState<typeof HERO_PREVIEW_SLIDES[0]['productsOnSale'][0] | null>(null);
+  const [isMentionFlashActive, setIsMentionFlashActive] = useState<boolean>(false);
+  const [hostSpokenTranscript, setHostSpokenTranscript] = useState<string>('Welcome to live stream! Watch out for special tagged deals.');
+  const [spotlightTimeLeft, setSpotlightTimeLeft] = useState<number>(10);
+
+  // Real-Time Simulated Viewer Count State for Live Video Stream Cards
+  const [liveViewerCounts, setLiveViewerCounts] = useState<Record<string, number>>({
+    'hero-1': 1420,
+    'hero-2': 2150,
+    'hero-3': 2890,
+    'hero-4': 950,
+    'stream-1': 1420,
+    'stream-2': 2890,
+    'stream-3': 950
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLiveViewerCounts((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((key) => {
+          const delta = Math.floor(Math.random() * 25) - 10;
+          next[key] = Math.max(120, (next[key] || 1500) + delta);
+        });
+        return next;
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Real-Time Product Tagging Simulation Effect when Expanded Preview is Open
+  useEffect(() => {
+    if (!expandedPreviewSlide) {
+      setActiveMentionedProduct(null);
+      return;
+    }
+
+    const products = expandedPreviewSlide.productsOnSale || [];
+    if (products.length === 0) return;
+
+    const phrases = [
+      "Look at this incredible quality! Grab yours now directly from the stream.",
+      "This is our number one bestselling item in Harare today! Don't miss out.",
+      "Incredible cross-border value! Add this to your cart with just one click.",
+      "Fresh stock just arrived at our store depot! Highly recommended for family."
+    ];
+
+    const interval = setInterval(() => {
+      const randomProduct = products[Math.floor(Math.random() * products.length)];
+      const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+      
+      setActiveMentionedProduct(randomProduct);
+      setHostSpokenTranscript(randomPhrase);
+      setIsMentionFlashActive(true);
+      setSpotlightTimeLeft(10); // Reset timer
+      setCallToast(`🎯 Host Tagged & Mentioned: ${randomProduct.name}!`);
+      setTimeout(() => setCallToast(null), 3500);
+
+      setTimeout(() => {
+        setIsMentionFlashActive(false);
+      }, 3500);
+    }, 12000);
+
+    return () => clearInterval(interval);
+  }, [expandedPreviewSlide]);
+
+  // Spotlight timer decrement effect
+  useEffect(() => {
+    if (!activeMentionedProduct) {
+      setSpotlightTimeLeft(10);
+      return;
+    }
+    
+    setSpotlightTimeLeft(10);
+    const timer = setInterval(() => {
+      setSpotlightTimeLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [activeMentionedProduct]);
 
   // Touch & Mouse Gestures for Swipable Hero Card
   const heroTouchStartX = useRef<number | null>(null);
@@ -550,6 +644,95 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
     }
   };
 
+  // Full-Screen Swipe Gestures
+  const fullTouchStartX = useRef<number | null>(null);
+  const fullTouchStartY = useRef<number | null>(null);
+  const fullTouchEndX = useRef<number | null>(null);
+  const fullTouchEndY = useRef<number | null>(null);
+
+  const handleFullTouchStart = (e: React.TouchEvent) => {
+    fullTouchStartX.current = e.touches[0].clientX;
+    fullTouchStartY.current = e.touches[0].clientY;
+    fullTouchEndX.current = null;
+    fullTouchEndY.current = null;
+  };
+
+  const handleFullTouchMove = (e: React.TouchEvent) => {
+    fullTouchEndX.current = e.touches[0].clientX;
+    fullTouchEndY.current = e.touches[0].clientY;
+  };
+
+  const handleFullTouchEnd = () => {
+    if (fullTouchStartX.current !== null && fullTouchEndX.current !== null && fullTouchStartY.current !== null && fullTouchEndY.current !== null) {
+      const deltaX = fullTouchStartX.current - fullTouchEndX.current;
+      const deltaY = fullTouchStartY.current - fullTouchEndY.current;
+
+      // Vertical swipe (up/down) to transition between streams like a vertical video feed (Reels/TikTok style)
+      if (Math.abs(deltaY) > 35 && Math.abs(deltaY) > Math.abs(deltaX)) {
+        if (deltaY > 0) {
+          // Swipe up -> Next stream
+          const nextIdx = activeHeroSlideIndex < HERO_PREVIEW_SLIDES.length - 1 ? activeHeroSlideIndex + 1 : 0;
+          setActiveHeroSlideIndex(nextIdx);
+          setExpandedPreviewSlide(HERO_PREVIEW_SLIDES[nextIdx]);
+          setCallToast(`📺 Swiped to next live stream: ${HERO_PREVIEW_SLIDES[nextIdx].title}`);
+          setTimeout(() => setCallToast(null), 2000);
+        } else {
+          // Swipe down -> Previous stream
+          const prevIdx = activeHeroSlideIndex > 0 ? activeHeroSlideIndex - 1 : HERO_PREVIEW_SLIDES.length - 1;
+          setActiveHeroSlideIndex(prevIdx);
+          setExpandedPreviewSlide(HERO_PREVIEW_SLIDES[prevIdx]);
+          setCallToast(`📺 Swiped to previous live stream: ${HERO_PREVIEW_SLIDES[prevIdx].title}`);
+          setTimeout(() => setCallToast(null), 2000);
+        }
+      }
+      // Horizontal swipe fallback
+      else if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.1) {
+        if (deltaX > 0) {
+          const nextIdx = activeHeroSlideIndex < HERO_PREVIEW_SLIDES.length - 1 ? activeHeroSlideIndex + 1 : 0;
+          setActiveHeroSlideIndex(nextIdx);
+          setExpandedPreviewSlide(HERO_PREVIEW_SLIDES[nextIdx]);
+        } else {
+          const prevIdx = activeHeroSlideIndex > 0 ? activeHeroSlideIndex - 1 : HERO_PREVIEW_SLIDES.length - 1;
+          setActiveHeroSlideIndex(prevIdx);
+          setExpandedPreviewSlide(HERO_PREVIEW_SLIDES[prevIdx]);
+        }
+      }
+    }
+    fullTouchStartX.current = null;
+    fullTouchStartY.current = null;
+    fullTouchEndX.current = null;
+    fullTouchEndY.current = null;
+  };
+
+  // Mouse Wheel / Trackpad Vertical Scrolling between streams in Full Screen mode
+  useEffect(() => {
+    if (!expandedPreviewSlide) return;
+
+    let wheelTimeout = false;
+    const handleWheel = (e: WheelEvent) => {
+      if (wheelTimeout) return;
+      if (Math.abs(e.deltaY) > 30) {
+        wheelTimeout = true;
+        setTimeout(() => { wheelTimeout = false; }, 600);
+
+        if (e.deltaY > 0) {
+          // Scroll down -> Next stream
+          const nextIdx = activeHeroSlideIndex < HERO_PREVIEW_SLIDES.length - 1 ? activeHeroSlideIndex + 1 : 0;
+          setActiveHeroSlideIndex(nextIdx);
+          setExpandedPreviewSlide(HERO_PREVIEW_SLIDES[nextIdx]);
+        } else {
+          // Scroll up -> Previous stream
+          const prevIdx = activeHeroSlideIndex > 0 ? activeHeroSlideIndex - 1 : HERO_PREVIEW_SLIDES.length - 1;
+          setActiveHeroSlideIndex(prevIdx);
+          setExpandedPreviewSlide(HERO_PREVIEW_SLIDES[prevIdx]);
+        }
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [expandedPreviewSlide, activeHeroSlideIndex]);
+
   // Keyboard Navigation: ArrowLeft / ArrowRight to swipe card, Escape to exit full page preview
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -559,10 +742,22 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
       }
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        setActiveHeroSlideIndex((prev) => (prev > 0 ? prev - 1 : HERO_PREVIEW_SLIDES.length - 1));
+        setActiveHeroSlideIndex((prev) => {
+          const nextIdx = prev > 0 ? prev - 1 : HERO_PREVIEW_SLIDES.length - 1;
+          if (expandedPreviewSlide) {
+            setExpandedPreviewSlide(HERO_PREVIEW_SLIDES[nextIdx]);
+          }
+          return nextIdx;
+        });
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        setActiveHeroSlideIndex((prev) => (prev < HERO_PREVIEW_SLIDES.length - 1 ? prev + 1 : 0));
+        setActiveHeroSlideIndex((prev) => {
+          const nextIdx = prev < HERO_PREVIEW_SLIDES.length - 1 ? prev + 1 : 0;
+          if (expandedPreviewSlide) {
+            setExpandedPreviewSlide(HERO_PREVIEW_SLIDES[nextIdx]);
+          }
+          return nextIdx;
+        });
       } else if (e.key === 'Escape' && expandedPreviewSlide) {
         setExpandedPreviewSlide(null);
       }
@@ -571,6 +766,13 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [expandedPreviewSlide]);
+
+  // Sync fullscreen state with parent to auto-hide vertical menu buttons except cart
+  useEffect(() => {
+    if (onFullscreenChange) {
+      onFullscreenChange(!!expandedPreviewSlide);
+    }
+  }, [expandedPreviewSlide, onFullscreenChange]);
 
   const handleLikeSlide = (slideId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -1029,6 +1231,19 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
     onEndCall();
   };
 
+  // Share Live Link helper
+  const handleShareLiveLink = () => {
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://pnp.co.zw/live';
+    const shareText = `🛒 Join my live TM Pick n Pay shopping session! Watch live feeds and shop groceries together: ${currentUrl}`;
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareText).catch(() => {});
+    }
+
+    setCallToast('🔗 Live session link copied! Ready to share on WhatsApp or SMS.');
+    setTimeout(() => setCallToast(null), 3500);
+  };
+
   // Reactions
   const triggerReaction = (emoji: string) => {
     const reaction = {
@@ -1323,17 +1538,17 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
                     )}
                   </button>
 
-                  {/* Click to Expand to Full Page */}
+                  {/* Click to Expand to Full Screen Vertical Mobile Video */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setExpandedPreviewSlide(HERO_PREVIEW_SLIDES[activeHeroSlideIndex]);
                     }}
-                    title="Click to Expand Live Video to Full Page"
+                    title="Enable video to fill full vertical mobile screen"
                     className="bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black px-2.5 py-1 rounded-xl text-[10px] flex items-center gap-1 cursor-pointer transition-all active:scale-95 shadow-md shadow-emerald-500/20"
                   >
                     <Maximize2 className="w-3 h-3" />
-                    <span className="hidden xs:inline">Expand</span>
+                    <span className="hidden xs:inline">Full Screen Video</span>
                   </button>
                 </div>
               </div>
@@ -1379,8 +1594,8 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
                     )}
 
                     <span className="bg-black/60 backdrop-blur-md text-cyan-200 border border-cyan-400/30 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
-                      <Users className="w-3 h-3 text-cyan-400" />
-                      {HERO_PREVIEW_SLIDES[activeHeroSlideIndex].viewers.toLocaleString()} watching
+                      <Users className="w-3 h-3 text-cyan-400 animate-pulse" />
+                      {(liveViewerCounts[HERO_PREVIEW_SLIDES[activeHeroSlideIndex].id] || HERO_PREVIEW_SLIDES[activeHeroSlideIndex].viewers).toLocaleString()} watching
                     </span>
 
                     <span className="bg-stone-900/70 backdrop-blur-md text-amber-300 border border-amber-400/30 text-[10px] font-bold px-2 py-1 rounded-full hidden sm:flex items-center gap-1">
@@ -1448,16 +1663,62 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
                       </button>
 
                       {/* Start New Live Shopping Call Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onStartLiveCall) onStartLiveCall();
-                        }}
-                        className="bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black px-5 py-2.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2 shadow-xl shadow-emerald-500/30 transition-all active:scale-95 cursor-pointer"
-                      >
-                        <Video className="w-4 h-4" />
-                        <span>Start New Live Shopping Call</span>
-                      </button>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onStartLiveCall) onStartLiveCall();
+                          }}
+                          className="bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black px-5 py-2.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2 shadow-xl shadow-emerald-500/30 transition-all active:scale-95 cursor-pointer"
+                        >
+                          <Video className="w-4 h-4" />
+                          <span>Start New Live Shopping Call</span>
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://pnp.co.zw/live';
+                            const shareText = `🛒 Join my live TM Pick n Pay shopping session! Watch live feeds and shop groceries together: ${currentUrl}`;
+                            
+                            // Try to open WhatsApp directly
+                            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+                            window.open(whatsappUrl, '_blank');
+                            
+                            setCallToast('💬 Opening WhatsApp to share your live session invite...');
+                            setTimeout(() => setCallToast(null), 3500);
+                          }}
+                          className="bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold px-4 py-2.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
+                          title="Invite friends via WhatsApp"
+                        >
+                          <span className="text-white">💬</span>
+                          <span>Invite via WhatsApp</span>
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleShareLiveLink();
+                          }}
+                          className="bg-[#123154] hover:bg-[#1a416e] text-cyan-300 border border-cyan-400/40 font-extrabold px-4 py-2.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
+                          title="Copy live session invite link"
+                        >
+                          <ExternalLink className="w-4 h-4 text-cyan-300" />
+                          <span>Copy Link</span>
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowAnalyticsModal(true);
+                          }}
+                          className="bg-[#092544] hover:bg-[#123154] text-emerald-300 border border-emerald-400/40 font-extrabold px-4 py-2.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
+                          title="View Real-Time Analytics & Peak Product Interest"
+                        >
+                          <Sliders className="w-4 h-4 text-emerald-400" />
+                          <span>Live Analytics</span>
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2 bg-[#091d33]/80 border border-blue-400/20 px-3 py-1.5 rounded-xl self-start sm:self-auto">
@@ -1993,14 +2254,54 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
                 key={stream.id}
                 className="bg-[#0b1f36] border border-[#18395e] rounded-3xl overflow-hidden shadow-2xl relative group"
               >
-                {/* Video / Poster Header */}
-                <div className="relative aspect-[4/3] sm:aspect-video w-full bg-stone-950 overflow-hidden">
+                {/* Video / Poster Header (Click to Expand to Full Screen Vertical Mobile Video) */}
+                <div
+                  onClick={() => {
+                    const slide = HERO_PREVIEW_SLIDES.find((s) => s.id === stream.id) || {
+                      id: stream.id,
+                      badge: 'LIVE NOW',
+                      badgeColor: 'border-red-500/40 text-red-300 bg-red-500/20',
+                      title: stream.title,
+                      subtitle: `${stream.host} • ${stream.location}`,
+                      description: `Live grocery shopping feed from TM Pick n Pay ${stream.location}.`,
+                      hostName: stream.host,
+                      hostAvatar: stream.avatar,
+                      location: stream.location,
+                      storeName: 'Pick n Pay Live',
+                      viewers: stream.viewers,
+                      likes: stream.likes,
+                      videoPoster: stream.videoPoster,
+                      isPrimaryRoom: false,
+                      productsOnSale: [
+                        {
+                          id: `${stream.id}-item`,
+                          name: stream.featuredProduct.name,
+                          priceUSD: stream.featuredProduct.priceUSD,
+                          unit: 'Featured Stream Deal',
+                          image: stream.featuredProduct.image,
+                          category: 'PANTRY' as ProductCategory,
+                          tag: '⭐ FEATURED'
+                        }
+                      ]
+                    };
+                    setExpandedPreviewSlide(slide);
+                  }}
+                  className="relative aspect-[4/3] sm:aspect-video w-full bg-stone-950 overflow-hidden cursor-pointer group/stream"
+                >
                   <img
                     src={stream.videoPoster}
                     alt={stream.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90"
+                    className="w-full h-full object-cover group-hover/stream:scale-105 transition-transform duration-700 opacity-90"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#071320] via-transparent to-black/40" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#071320] via-transparent to-black/40 pointer-events-none" />
+
+                  {/* Hover Prompt to Full Screen */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/stream:opacity-100 transition-opacity pointer-events-none">
+                    <span className="bg-black/80 backdrop-blur-md text-emerald-300 border border-emerald-400/50 px-3.5 py-1.5 rounded-2xl text-xs font-black flex items-center gap-1.5 shadow-2xl">
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <span>Watch Full Screen Video</span>
+                    </span>
+                  </div>
 
                   {/* Top Badges */}
                   <div className="absolute top-3 left-3 flex items-center gap-2">
@@ -2009,12 +2310,32 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
                       LIVE
                     </span>
                     <span className="bg-black/60 backdrop-blur-md text-cyan-200 border border-cyan-400/30 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
-                      <Users className="w-3 h-3 text-cyan-400" />
-                      {stream.viewers.toLocaleString()} watching
+                      <Users className="w-3 h-3 text-cyan-400 animate-pulse" />
+                      {(liveViewerCounts[stream.id] || stream.viewers).toLocaleString()} watching
                     </span>
                   </div>
 
-                  <div className="absolute top-3 right-3">
+                  {/* Volume Controls Overlay */}
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full border border-white/10 z-20">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Simulation: mute/unmute logic
+                      }}
+                      className="text-white hover:text-emerald-400 cursor-pointer"
+                    >
+                      <Volume2 className="w-3 h-3" />
+                    </button>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      className="w-12 h-1 accent-emerald-400 cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+
+                  <div className="absolute top-3 right-16">
                     <span className="bg-emerald-500/20 backdrop-blur-md text-emerald-300 border border-emerald-400/40 text-[10px] font-bold px-3 py-1 rounded-full shadow-lg">
                       ❤️ {stream.likes}
                     </span>
@@ -2086,297 +2407,506 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
           </div>
         </div>
 
-        {/* Full Page Live Video Call Preview Modal */}
+        {/* Full Page Vertical Mobile Live Video Shopping Experience */}
         {expandedPreviewSlide && (
-          <div className="fixed inset-0 z-50 bg-[#030913]/98 backdrop-blur-2xl flex flex-col animate-in fade-in duration-200 overflow-y-auto">
-            {/* Modal Header Bar */}
-            <div className="bg-[#071728] border-b border-[#183a61] px-4 py-3 flex items-center justify-between gap-3 sticky top-0 z-50">
-              <div className="flex items-center gap-3 min-w-0">
-                <img
-                  src={expandedPreviewSlide.hostAvatar}
-                  alt={expandedPreviewSlide.hostName}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-emerald-400 shrink-0"
-                />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h2 className="font-black text-sm sm:text-base text-white truncate">
-                      {expandedPreviewSlide.title}
-                    </h2>
-                    <span className="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shrink-0">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                      LIVE
+          <div
+            onTouchStart={handleFullTouchStart}
+            onTouchMove={handleFullTouchMove}
+            onTouchEnd={handleFullTouchEnd}
+            onClick={() => {
+              setIsVerticalMenuVisible((prev) => !prev);
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              triggerReaction('❤️');
+            }}
+            className="fixed inset-0 z-[10000] bg-black w-full h-[100dvh] min-h-[100dvh] flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-300"
+          >
+            {/* Independent Floating Back Button at Top Left */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpandedPreviewSlide(null);
+              }}
+              className="fixed top-3 sm:top-4 left-3 sm:left-4 z-[1000005] bg-black/80 hover:bg-black/95 text-white p-2.5 sm:p-3 rounded-full shadow-2xl border-2 border-white/40 backdrop-blur-md flex items-center justify-center transition-all transform active:scale-90 hover:scale-110 cursor-pointer group"
+              title="Back to Live Shop (Esc)"
+              aria-label="Back to Live Shop"
+            >
+              <ArrowLeft className="w-5 h-5 text-white group-hover:-translate-x-0.5 transition-transform" />
+            </button>
+
+            {/* 1. Main Live Video filling FULL VERTICAL MOBILE SCREEN */}
+            <img
+              src={expandedPreviewSlide.videoPoster}
+              alt={expandedPreviewSlide.title}
+              className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 pointer-events-none ${
+                isExpandedVideoFrozen
+                  ? 'scale-100 filter-none ring-4 ring-cyan-400/50'
+                  : 'scale-105'
+              }`}
+            />
+
+            {/* Gradient Overlays for High-Contrast Text & Carousel Readability */}
+            <div className="absolute top-0 inset-x-0 h-44 bg-gradient-to-b from-black/85 via-black/40 to-transparent pointer-events-none z-10" />
+            <div className="absolute bottom-0 inset-x-0 h-96 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none z-10" />
+
+            {/* Floating Reactions Rising Layer (TikTok Live Style) */}
+            <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
+              {floatingReactions.map((r) => (
+                <div
+                  key={r.id}
+                  className="absolute text-3xl animate-bounce transition-all duration-1000"
+                  style={{
+                    left: `${r.x}%`,
+                    bottom: '25%',
+                    animation: 'floatUp 2.2s ease-out forwards'
+                  }}
+                >
+                  {r.emoji}
+                </div>
+              ))}
+            </div>
+
+            {/* Freeze Frame Banner if Video is Frozen */}
+            {isExpandedVideoFrozen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute top-20 left-3 right-3 sm:left-6 sm:right-auto z-30 bg-cyan-950/95 border-2 border-cyan-400 text-cyan-200 px-3.5 py-1.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-between gap-2 shadow-2xl backdrop-blur-md animate-in fade-in"
+              >
+                <div className="flex items-center gap-2">
+                  <Snowflake className="w-4 h-4 text-cyan-300 animate-spin" />
+                  <span>❄️ Video Frame Frozen • Scroll products freely below</span>
+                </div>
+                <button
+                  onClick={() => setIsExpandedVideoFrozen(false)}
+                  className="bg-cyan-400 text-stone-950 px-2 py-0.5 rounded-lg text-[10px] font-black cursor-pointer active:scale-95 whitespace-nowrap"
+                >
+                  Resume ▶️
+                </button>
+              </div>
+            )}
+
+            {/* Real-Time Host Mention Product Spotlight Banner & Flash Animation */}
+            {activeMentionedProduct && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className={`absolute top-20 sm:top-24 inset-x-3 sm:inset-x-6 z-40 bg-gradient-to-r from-emerald-950/95 via-stone-900/95 to-blue-950/95 border-2 ${
+                  isMentionFlashActive ? 'border-emerald-300 ring-8 ring-emerald-400/50 scale-105 animate-pulse' : 'border-emerald-500/70'
+                } rounded-3xl p-3 sm:p-4 shadow-2xl backdrop-blur-xl transition-all duration-500 animate-in fade-in slide-in-from-top-4 flex items-center justify-between gap-3 pointer-events-auto`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden bg-stone-900 border-2 border-emerald-400 shrink-0 shadow-lg">
+                    <img
+                      src={getProductImagePath(activeMentionedProduct.image)}
+                      alt={activeMentionedProduct.name}
+                      className="w-full h-full object-cover animate-pulse"
+                    />
+                    <span className="absolute top-1 left-1 bg-emerald-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase shadow">
+                      🎯 TAGGED
                     </span>
                   </div>
-                  <p className="text-xs text-blue-200/80 truncate">
-                    {expandedPreviewSlide.hostName} • {expandedPreviewSlide.location} • {expandedPreviewSlide.storeName}
-                  </p>
+
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border border-emerald-400/40 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-emerald-300 animate-spin" />
+                        Host Mentioned!
+                      </span>
+                      <span className="text-[10px] text-cyan-300 font-bold truncate">
+                        "{hostSpokenTranscript}"
+                      </span>
+                    </div>
+
+                    <h4 className="font-black text-xs sm:text-sm text-white truncate">
+                      {activeMentionedProduct.name}
+                    </h4>
+
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-emerald-400 text-xs sm:text-sm">
+                        {formatCurrency(activeMentionedProduct.priceUSD)}
+                      </span>
+                      <span className="text-[10px] text-stone-400 truncate">• {activeMentionedProduct.unit}</span>
+                      {/* Countdown Timer */}
+                      <span className="text-[10px] font-black text-rose-300 ml-2 animate-pulse">
+                        ⏳ {spotlightTimeLeft}s left
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => {
+                      handleAddProductToPersonalCart({
+                        id: activeMentionedProduct.id,
+                        name: activeMentionedProduct.name,
+                        priceUSD: activeMentionedProduct.priceUSD,
+                        image: activeMentionedProduct.image,
+                        unit: activeMentionedProduct.unit,
+                        category: activeMentionedProduct.category || 'PANTRY'
+                      });
+                      setCallToast(`🛒 Added ${activeMentionedProduct.name} to Personal Cart!`);
+                      setTimeout(() => setCallToast(null), 3000);
+                    }}
+                    className="bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black px-3.5 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/40 active:scale-95 cursor-pointer whitespace-nowrap animate-bounce"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Add to Cart</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveMentionedProduct(null)}
+                    className="text-stone-400 hover:text-white p-1.5 rounded-xl bg-white/5 hover:bg-white/15 cursor-pointer"
+                    title="Dismiss Spotlight"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 2. Top Header Bar: Host, Viewer Count, Freeze Frame, Sound, Cart, Close */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative z-30 p-3 sm:p-5 flex items-center justify-between gap-2"
+            >
+              {/* Host Pill (Indented slightly to accommodate independent floating back button at top-left) */}
+              <div className="ml-12 xs:ml-14 sm:ml-16 flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/20 p-1.5 pr-3 rounded-full shadow-lg min-w-0">
+                <div className="relative w-9 h-9 rounded-full overflow-hidden border-2 border-emerald-400 shrink-0">
+                  <img
+                    src={expandedPreviewSlide.hostAvatar}
+                    alt={expandedPreviewSlide.hostName}
+                    className="w-full h-full object-cover"
+                  />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border border-black" />
+                </div>
+                <div className="leading-tight min-w-0">
+                  <div className="flex items-center gap-1.5 flex-nowrap">
+                    <span className="font-extrabold text-xs text-white truncate max-w-[90px] xs:max-w-[130px]">
+                      {expandedPreviewSlide.hostName}
+                    </span>
+                    {isExpandedVideoFrozen ? (
+                      <span className="bg-cyan-500 text-stone-950 text-[8px] font-black px-1.5 py-0.2 rounded-full uppercase shrink-0">
+                        FROZEN
+                      </span>
+                    ) : (
+                      <span className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.2 rounded-full uppercase flex items-center gap-0.5 shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        LIVE
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-cyan-300/80 truncate block">
+                    {expandedPreviewSlide.storeName} • {expandedPreviewSlide.location}
+                  </span>
                 </div>
               </div>
 
-              {/* Top Controls */}
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Freeze Frame Video Toggle */}
+              {/* Top Right Controls */}
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                {/* Viewer Count */}
+                <div className="bg-black/60 backdrop-blur-md text-cyan-200 border border-cyan-400/30 text-[10px] sm:text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <Users className="w-3 h-3 text-cyan-400 animate-pulse" />
+                  <span>{(liveViewerCounts[expandedPreviewSlide.id] || expandedPreviewSlide.viewers).toLocaleString()}</span>
+                </div>
+
+                {/* Freeze Frame Button */}
                 <button
                   onClick={() => {
                     setIsExpandedVideoFrozen((prev) => !prev);
-                    setCallToast(!isExpandedVideoFrozen ? '❄️ Video Frame Frozen! Products scroll smoothly on the side.' : '▶️ Live Video Resumed');
+                    setCallToast(!isExpandedVideoFrozen ? '❄️ Video Frame Frozen! Products scroll smoothly below.' : '▶️ Live Video Resumed');
                     setTimeout(() => setCallToast(null), 2500);
                   }}
-                  className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold transition-all active:scale-95 cursor-pointer ${
+                  className={`p-1.5 sm:px-2.5 sm:py-1 rounded-full border flex items-center gap-1 text-[10px] sm:text-xs font-bold transition-all active:scale-95 cursor-pointer backdrop-blur-md ${
                     isExpandedVideoFrozen
                       ? 'bg-cyan-400 text-stone-950 border-cyan-200 font-black shadow-md'
-                      : 'bg-[#122e4d] hover:bg-[#1a416d] text-cyan-300 border-blue-400/20'
+                      : 'bg-black/60 hover:bg-black/80 text-cyan-300 border-cyan-400/30'
                   }`}
                   title={isExpandedVideoFrozen ? 'Resume live video' : 'Freeze video frame'}
                 >
                   <Snowflake className={`w-3.5 h-3.5 ${isExpandedVideoFrozen ? 'animate-spin' : ''}`} />
-                  <span>{isExpandedVideoFrozen ? 'Frozen ❄️' : 'Freeze Frame'}</span>
+                  <span className="hidden xs:inline">{isExpandedVideoFrozen ? 'Frozen' : 'Freeze'}</span>
                 </button>
 
-                <div className="bg-black/50 text-cyan-200 border border-cyan-400/30 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>{expandedPreviewSlide.viewers.toLocaleString()} watching</span>
-                </div>
-
+                {/* Audio Mute/Unmute */}
                 <button
                   onClick={() => setHeroCardMuted((prev) => !prev)}
-                  className="p-2 rounded-xl bg-[#122e4d] hover:bg-[#1a416d] text-blue-200 border border-blue-400/20 cursor-pointer"
+                  className="p-2 rounded-full bg-black/60 hover:bg-black/80 text-blue-200 border border-white/20 cursor-pointer active:scale-95 transition-all backdrop-blur-md"
                   title={heroCardMuted ? 'Unmute' : 'Mute'}
                 >
                   {heroCardMuted ? (
-                    <VolumeX className="w-4 h-4 text-stone-400" />
+                    <VolumeX className="w-3.5 h-3.5 text-stone-400" />
                   ) : (
-                    <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+                    <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
                   )}
                 </button>
 
+                {/* Close Fullscreen */}
                 <button
                   onClick={() => setExpandedPreviewSlide(null)}
-                  className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-white cursor-pointer transition-colors"
-                  title="Close Full Page Preview (Esc)"
+                  className="p-2 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20 cursor-pointer transition-colors active:scale-95 backdrop-blur-md"
+                  title="Close Full Screen (Esc)"
                 >
                   <Minimize2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* Modal Body: Two Columns (Main Video Player & Interactive Live Sale Products Shelf) */}
-            <div className="flex-1 max-w-7xl mx-auto w-full p-3 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left 2 Cols: Main Live Video Player Stream (Sticky Video Pane so products scroll under/beside it) */}
-              <div className="lg:col-span-2 space-y-4 flex flex-col justify-between lg:sticky lg:top-20 self-start">
-                <div className="relative aspect-[16/10] sm:aspect-video w-full rounded-3xl overflow-hidden bg-stone-950 border-2 border-emerald-500/40 shadow-2xl group flex flex-col justify-between p-4 sm:p-6">
-                  {/* High Quality Stream Video Poster with Freeze Frame Hold */}
-                  <img
-                    src={expandedPreviewSlide.videoPoster}
-                    alt={expandedPreviewSlide.title}
-                    className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 ${
-                      isExpandedVideoFrozen
-                        ? 'opacity-95 scale-100 ring-4 ring-cyan-400/50'
-                        : 'opacity-85 group-hover:scale-105'
-                    }`}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#040e1b] via-transparent to-black/50" />
+            {/* Middle Touch Area with Stream Information */}
+            <div className="flex-1 relative z-20 flex flex-col justify-end p-4 pointer-events-none">
+              {/* Single Click Screen Hint / Swipe Channel Hint */}
+              <div className="absolute top-4 inset-x-0 flex flex-col items-center gap-1 pointer-events-none">
+                <span className="bg-black/50 backdrop-blur-md text-white/90 text-[10px] font-bold px-3 py-1 rounded-full border border-white/15 flex items-center gap-1.5 shadow-md">
+                  <span>💡 Single click screen to {isVerticalMenuVisible ? 'hide' : 'show'} vertical menu</span>
+                  <span>•</span>
+                  <span>Swipe to change channel</span>
+                </span>
+              </div>
 
-                  {/* Freeze Frame Banner Alert */}
-                  {isExpandedVideoFrozen && (
-                    <div className="absolute top-16 left-4 z-20 bg-cyan-950/95 border border-cyan-400 text-cyan-200 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-2xl backdrop-blur-md">
-                      <Snowflake className="w-4 h-4 text-cyan-300 animate-spin" />
-                      <span>Video Frozen on Current Frame • Scroll products freely</span>
-                    </div>
-                  )}
+              {/* Title & Host Subtitle Tag */}
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="max-w-md pointer-events-auto space-y-1 drop-shadow-lg mb-2"
+              >
+                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-md">
+                  {expandedPreviewSlide.badge}
+                </span>
+                <h3 className="text-white font-black text-sm sm:text-base leading-tight">
+                  {expandedPreviewSlide.title}
+                </h3>
+                <p className="text-blue-200/90 text-[11px] line-clamp-2">
+                  {expandedPreviewSlide.description}
+                </p>
+              </div>
+            </div>
 
-                  {/* Badges on Top */}
-                  <div className="relative z-10 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      {isExpandedVideoFrozen ? (
-                        <span className="bg-cyan-500 text-stone-950 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-lg border border-cyan-200">
-                          <Snowflake className="w-3 h-3 animate-spin" />
-                          FRAME FROZEN
-                        </span>
-                      ) : (
-                        <span className="bg-red-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-lg">
-                          <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                          BROADCASTING LIVE
-                        </span>
-                      )}
-                      <span className="bg-emerald-500/20 backdrop-blur-md text-emerald-300 border border-emerald-400/40 text-xs font-bold px-3 py-1 rounded-full">
-                        {expandedPreviewSlide.storeName}
-                      </span>
-                    </div>
+            {/* TikTok-Style Vertical Action Menu (Appears / Disappears on Single Click on Screen) */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className={`fixed right-3 sm:right-5 bottom-68 sm:bottom-72 z-40 flex flex-col items-center gap-2.5 transition-all duration-300 pointer-events-auto ${
+                isVerticalMenuVisible
+                  ? 'opacity-100 translate-x-0 scale-100'
+                  : 'opacity-0 translate-x-12 scale-95 pointer-events-none'
+              }`}
+            >
+              {/* Like Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLikeSlide(expandedPreviewSlide.id, e);
+                }}
+                className="w-10 h-10 rounded-full bg-black/75 hover:bg-black/90 backdrop-blur-md text-pink-400 border border-white/20 shadow-xl flex items-center justify-center transition-transform active:scale-125 cursor-pointer group"
+                title="Like Stream"
+              >
+                <span className="text-lg group-hover:scale-125 transition-transform">❤️</span>
+              </button>
 
-                    <div className="flex items-center gap-2">
-                      {['❤️', '👏', '🛒', '🔥'].map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={() => triggerReaction(emoji)}
-                          className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md text-sm flex items-center justify-center cursor-pointer transition-transform active:scale-125"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+              {/* Applause Reaction */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerReaction('👏');
+                }}
+                className="w-10 h-10 rounded-full bg-black/75 hover:bg-black/90 backdrop-blur-md text-lg border border-white/20 shadow-xl flex items-center justify-center transition-transform active:scale-125 cursor-pointer"
+                title="Cheer / Clap"
+              >
+                👏
+              </button>
 
-                  {/* Audio visualizer wave bar */}
-                  <div className="relative z-10 flex items-center gap-1 bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-2xl w-fit">
-                    <span className="text-[11px] font-bold text-blue-200">Live Audio Stream</span>
-                    <div className="flex items-end gap-0.5 h-3 ml-2">
-                      <span className="w-1 bg-emerald-400 rounded-full animate-bounce h-2" />
-                      <span className="w-1 bg-emerald-400 rounded-full animate-bounce h-3 delay-75" />
-                      <span className="w-1 bg-emerald-400 rounded-full animate-bounce h-1.5 delay-150" />
-                      <span className="w-1 bg-emerald-400 rounded-full animate-bounce h-2.5 delay-100" />
-                    </div>
-                  </div>
+              {/* Fire Reaction */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerReaction('🔥');
+                }}
+                className="w-10 h-10 rounded-full bg-black/75 hover:bg-black/90 backdrop-blur-md text-lg border border-white/20 shadow-xl flex items-center justify-center transition-transform active:scale-125 cursor-pointer"
+                title="Fire Reaction"
+              >
+                🔥
+              </button>
 
-                  {/* Bottom Video Controls & Call Initiator Action with Floating Cart Button Above */}
-                  <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#061424]/90 backdrop-blur-md border border-emerald-500/30 p-3 sm:p-4 rounded-2xl">
-                    <div>
-                      <h3 className="font-black text-sm sm:text-base text-white">
-                        {expandedPreviewSlide.subtitle}
-                      </h3>
-                      <p className="text-xs text-blue-200/80 line-clamp-1">
-                        {expandedPreviewSlide.description}
-                      </p>
-                    </div>
+              {/* Freeze Frame Toggle Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpandedVideoFrozen((prev) => !prev);
+                  setCallToast(!isExpandedVideoFrozen ? '❄️ Video Frame Frozen! Products scroll smoothly below.' : '▶️ Live Video Resumed');
+                  setTimeout(() => setCallToast(null), 2500);
+                }}
+                className={`w-10 h-10 rounded-full backdrop-blur-md border shadow-xl flex items-center justify-center transition-transform active:scale-110 cursor-pointer ${
+                  isExpandedVideoFrozen
+                    ? 'bg-cyan-400 text-stone-950 border-cyan-200'
+                    : 'bg-black/75 hover:bg-black/90 text-cyan-300 border-white/20'
+                }`}
+                title={isExpandedVideoFrozen ? 'Resume live video' : 'Freeze video frame'}
+              >
+                <Snowflake className={`w-4 h-4 ${isExpandedVideoFrozen ? 'animate-spin' : ''}`} />
+              </button>
 
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
-                      {/* Floating Cart Button above Start Live Call Button */}
-                      <button
-                        onClick={() => setShowPersonalCartDrawer(true)}
-                        className="bg-emerald-600/90 hover:bg-emerald-500 text-white font-extrabold px-3 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer whitespace-nowrap border border-emerald-400/30"
-                        title="View My Cart"
-                      >
-                        <ShoppingCart className="w-3.5 h-3.5" />
-                        <span>My Cart ({personalCart.reduce((s, i) => s + i.quantity, 0)})</span>
-                      </button>
+              {/* Audio Mute/Unmute */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setHeroCardMuted((prev) => !prev);
+                  setCallToast(heroCardMuted ? '🔊 Stream audio unmuted' : '🔇 Stream audio muted');
+                  setTimeout(() => setCallToast(null), 2500);
+                }}
+                className="w-10 h-10 rounded-full bg-black/75 hover:bg-black/90 backdrop-blur-md border border-white/20 shadow-xl flex items-center justify-center transition-transform active:scale-110 cursor-pointer text-blue-200"
+                title={heroCardMuted ? 'Unmute preview sound' : 'Mute preview sound'}
+              >
+                {heroCardMuted ? (
+                  <VolumeX className="w-4 h-4 text-stone-400" />
+                ) : (
+                  <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+                )}
+              </button>
 
-                      <button
-                        onClick={() => {
-                          setExpandedPreviewSlide(null);
-                          if (onStartLiveCall) onStartLiveCall();
-                        }}
-                        className="bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black px-6 py-3 rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/30 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
-                      >
-                        <Video className="w-4 h-4" />
-                        <span>Start / Join Live Video Call Now</span>
-                      </button>
-                    </div>
+              {/* Join Live Call Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpandedPreviewSlide(null);
+                  if (onStartLiveCall) onStartLiveCall();
+                }}
+                className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#941135] to-[#e02657] text-white border-2 border-[#FFB81C] shadow-xl flex items-center justify-center transition-transform active:scale-110 cursor-pointer"
+                title="Start / Join Live Video Call"
+              >
+                <Video className="w-4 h-4 text-white" />
+              </button>
+            </div>
+
+            {/* Floating Cart Button Icon on bottom-right (Placed directly ABOVE the Horizontal Carousel) */}
+            {/* Always visible directly above the horizontal carousel on the right */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowPersonalCartDrawer(true);
+              }}
+              className="fixed right-3 sm:right-5 bottom-52 sm:bottom-56 z-[1000000] bg-gradient-to-tr from-[#002D62] via-[#004b9e] to-[#0284c7] hover:from-[#001D42] hover:to-[#0284c7] text-white p-3.5 rounded-full shadow-2xl border-2 border-emerald-400 flex items-center justify-center transition-all transform active:scale-90 hover:scale-110 pointer-events-auto cursor-pointer"
+              title={`View Personal Cart (${personalCart.reduce((s, i) => s + i.quantity, 0)} items)`}
+              aria-label="View Shopping Cart"
+            >
+              {(personalCart.length > 0 || cart.length > 0) ? (
+                <span className="absolute -top-1.5 -right-1.5 bg-[#D0021B] text-white text-[10px] font-black min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center shadow-lg border-2 border-white animate-bounce">
+                  {personalCart.reduce((s, i) => s + i.quantity, 0) + cart.reduce((s, i) => s + i.quantity, 0)}
+                </span>
+              ) : (
+                <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-stone-900 animate-pulse" />
+              )}
+              <ShoppingCart className="w-5 h-5 text-white" />
+            </button>
+
+            {/* 3. FLOATING HORIZONTAL CAROUSEL OF MENU PRODUCTS AT BOTTOM */}
+            <div className="relative z-30 w-full px-2.5 sm:px-4 pb-3 sm:pb-5 space-y-2 pointer-events-auto">
+              {/* Carousel Header Bar */}
+              <div className="bg-[#071626]/90 backdrop-blur-xl border border-emerald-500/40 px-3 py-2 rounded-2xl flex items-center justify-between gap-2 shadow-2xl">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="p-1 bg-amber-500/20 text-amber-300 rounded-lg">
+                    <Flame className="w-3.5 h-3.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <h4 className="font-black text-xs text-white truncate">
+                      Products on Sale in Video ({expandedPreviewSlide.productsOnSale.length} Items)
+                    </h4>
+                    <span className="text-[9px] text-cyan-200/70 block truncate">
+                      Swipe horizontally to browse items on sale in this live stream
+                    </span>
                   </div>
                 </div>
 
-                {/* Subtitle / Description Card */}
-                <div className="bg-[#0b1f36] border border-[#18395e] rounded-2xl p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Radio className="w-4 h-4 text-emerald-400" />
-                    <h4 className="font-extrabold text-sm text-white">About this Live Shopping Session</h4>
-                  </div>
-                  <p className="text-xs text-blue-200/80 leading-relaxed">
-                    {expandedPreviewSlide.description}
-                  </p>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleAddAllSlideProductsToPersonalCart(expandedPreviewSlide)}
+                    className="bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black px-2.5 py-1 rounded-xl text-[10px] flex items-center gap-1 shadow-md shadow-emerald-500/20 active:scale-95 cursor-pointer whitespace-nowrap"
+                  >
+                    <Zap className="w-3 h-3 fill-stone-950" />
+                    <span>Add All to Cart</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setExpandedPreviewSlide(null);
+                      if (onStartLiveCall) onStartLiveCall();
+                    }}
+                    className="bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold px-2.5 py-1 rounded-xl text-[10px] flex items-center gap-1 active:scale-95 cursor-pointer whitespace-nowrap"
+                  >
+                    <Video className="w-3 h-3" />
+                    <span>Join Call</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Right Col: Interactive Products On Sale Shelf */}
-              <div className="bg-[#0b1f36] border border-[#18395e] rounded-3xl p-4 sm:p-5 flex flex-col justify-between space-y-4 shadow-2xl">
-                <div className="flex items-center justify-between gap-2 border-b border-[#183a61] pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="p-1.5 bg-amber-500/20 text-amber-300 rounded-xl">
-                      <Flame className="w-4 h-4" />
-                    </span>
-                    <div>
-                      <h4 className="font-black text-sm text-white">
-                        Products on Sale in Video
-                      </h4>
-                      <p className="text-[11px] text-blue-200/70">
-                        {expandedPreviewSlide.productsOnSale.length} discounted items available
-                      </p>
+              {/* Horizontal Scrollable Products Carousel */}
+              <div className="flex items-stretch gap-2.5 overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5">
+                {expandedPreviewSlide.productsOnSale.map((item) => (
+                  <div
+                    key={item.id}
+                    className="w-48 xs:w-52 bg-[#061424]/92 backdrop-blur-xl border border-emerald-400/40 hover:border-emerald-300 rounded-2xl p-2.5 shadow-2xl flex-shrink-0 flex flex-col justify-between transition-all hover:scale-[1.02] group/item"
+                  >
+                    <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-stone-900 mb-1.5 border border-white/10">
+                      <img
+                        src={getProductImagePath(item.image)}
+                        alt={item.name}
+                        onError={(e) => handleProductImageError(e, item.name, item.category)}
+                        className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-300"
+                      />
+                      <span className="absolute top-1 left-1 bg-rose-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase shadow">
+                        {item.discount}
+                      </span>
+                      {item.tag && (
+                        <span className="absolute bottom-1 right-1 bg-stone-950/85 text-amber-300 text-[7px] font-black px-1 py-0.5 rounded uppercase">
+                          {item.tag}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-0.5 flex-1 min-w-0">
+                      <h5 className="font-extrabold text-[11px] text-white truncate group-hover/item:text-emerald-300 transition-colors">
+                        {item.name}
+                      </h5>
+                      <p className="text-[9px] text-blue-200/70 truncate">{item.unit}</p>
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <span className="font-black text-xs text-cyan-300">
+                          {formatCurrency(item.priceUSD)}
+                        </span>
+                        {item.originalPriceUSD && (
+                          <span className="text-[10px] text-stone-400 line-through">
+                            {formatCurrency(item.originalPriceUSD)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick Cart Actions */}
+                    <div className="pt-2 grid grid-cols-2 gap-1.5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddProductToPersonalCart(item as any, `Added from ${expandedPreviewSlide.hostName} Live Video`);
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-1 px-1 rounded-xl text-[10px] flex items-center justify-center gap-0.5 shadow-sm active:scale-95 cursor-pointer"
+                        title="Add to My Personal Cart"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>My Cart</span>
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddToCart(item.id, members[0]?.id || 'mem-1', `Added from live stream sale`);
+                          setCallToast(`🛒 Added ${item.name} to Shared Family Cart!`);
+                          triggerReaction('🛒');
+                          setTimeout(() => setCallToast(null), 3000);
+                        }}
+                        className="bg-[#153457] hover:bg-[#1d4879] text-cyan-200 border border-cyan-400/20 font-bold py-1 px-1 rounded-xl text-[10px] flex items-center justify-center gap-0.5 active:scale-95 cursor-pointer"
+                        title="Add to Shared Family Cart"
+                      >
+                        <span>+ Family</span>
+                      </button>
                     </div>
                   </div>
-
-                  <button
-                    onClick={() => handleAddAllSlideProductsToPersonalCart(expandedPreviewSlide)}
-                    className="bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow-md shadow-emerald-500/20 active:scale-95 cursor-pointer"
-                  >
-                    <Zap className="w-3.5 h-3.5 fill-stone-950" />
-                    <span>Add All</span>
-                  </button>
-                </div>
-
-                {/* Scrollable Products List in Full Page Preview */}
-                <div className="space-y-3 flex-1 overflow-y-auto max-h-[480px] pr-1 no-scrollbar">
-                  {expandedPreviewSlide.productsOnSale.map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-[#071320] border border-[#183a61] hover:border-emerald-400/60 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-md transition-all group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-stone-900 shrink-0">
-                          <img
-                            src={getProductImagePath(item.image)}
-                            alt={item.name}
-                            onError={(e) => handleProductImageError(e, item.name, item.category)}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                          />
-                          <span className="absolute bottom-0 left-0 right-0 bg-rose-600 text-white text-[7px] font-black text-center py-0.5 uppercase">
-                            {item.discount}
-                          </span>
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <h5 className="font-bold text-xs text-white truncate">{item.name}</h5>
-                          <p className="text-[10px] text-blue-200/70 truncate">{item.unit}</p>
-                          <div className="flex items-center gap-1.5 pt-0.5">
-                            <span className="font-black text-xs text-cyan-300">
-                              {formatCurrency(item.priceUSD)}
-                            </span>
-                            {item.originalPriceUSD && (
-                              <span className="text-[10px] text-stone-400 line-through">
-                                {formatCurrency(item.originalPriceUSD)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Add Buttons */}
-                      <div className="flex flex-col gap-1.5 shrink-0">
-                        <button
-                          onClick={() => {
-                            handleAddProductToPersonalCart(item as any, `Added from ${expandedPreviewSlide.hostName} Full Page Sale`);
-                          }}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-1.5 px-2.5 rounded-xl text-[10px] flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>My Cart</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            onAddToCart(item.id, members[0]?.id || 'mem-1', `Added from ${expandedPreviewSlide.hostName} Live Video`);
-                            setCallToast(`🛒 Added ${item.name} to Shared Family Cart!`);
-                            triggerReaction('🛒');
-                            setTimeout(() => setCallToast(null), 3000);
-                          }}
-                          className="bg-[#122e4d] hover:bg-[#1a416d] text-cyan-200 border border-cyan-400/20 font-bold py-1 px-2 rounded-xl text-[10px] flex items-center justify-center active:scale-95 cursor-pointer"
-                        >
-                          <span>+ Family</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Footer summary */}
-                <div className="pt-2 border-t border-[#183a61] flex items-center justify-between text-xs text-blue-200/80">
-                  <span>Personal Cart Items: {personalCart.reduce((s, i) => s + i.quantity, 0)}</span>
-                  <button
-                    onClick={() => setShowPersonalCartDrawer(true)}
-                    className="text-emerald-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <ShoppingCart className="w-3.5 h-3.5" />
-                    <span>View My Cart</span>
-                  </button>
-                </div>
+                ))}
               </div>
             </div>
           </div>
@@ -2992,6 +3522,13 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
                       }`}
                       title={`Click tile to add product for ${participant.name}`}
                     >
+                      {/* Badge Overlay */}
+                      {(participant.name.includes('Gogo') || participant.name.includes('Tinashe')) && (
+                        <div className="absolute top-1.5 left-1.5 z-20 bg-gradient-to-br from-amber-400 to-orange-500 text-stone-950 text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-md animate-pulse">
+                          {participant.name.includes('Gogo') ? '⭐ Top Fan' : '🛍️ Expert'}
+                        </div>
+                      )}
+
                       {/* Real Local Camera Feed for initiating user */}
                       {isSelf && !isCameraOff && hasCameraPermission ? (
                         <video
@@ -3105,6 +3642,16 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
                 >
                   <Snowflake className={`w-3.5 h-3.5 ${isLiveCallVideoFrozen ? 'animate-spin' : ''}`} />
                   <span className="hidden md:inline">{isLiveCallVideoFrozen ? 'Frozen ❄️' : 'Freeze'}</span>
+                </button>
+
+                {/* Launch Poll Button */}
+                <button
+                  onClick={() => setShowPollModal(true)}
+                  className="p-1.5 sm:px-2.5 sm:py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white flex items-center gap-1 transition-all active:scale-90"
+                  title="Launch Live Poll"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">Poll</span>
                 </button>
               </div>
 
@@ -3734,6 +4281,67 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
       )}
 
       {/* ========================================================= */}
+      {/* MODAL 5: LAUNCH POLL MODAL */}
+      {/* ========================================================= */}
+      {showPollModal && (
+        <div className="fixed inset-0 z-[100000] bg-stone-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0b1f36] border-2 border-amber-500/40 rounded-3xl p-6 max-w-sm w-full text-white shadow-2xl relative space-y-4">
+            <h3 className="font-black text-lg text-white">Create Quick Poll</h3>
+            <input
+              type="text"
+              placeholder="Question (e.g. Which product do you prefer?)"
+              className="w-full bg-[#071320] border border-[#183a61] rounded-xl p-3 text-sm text-white"
+              value={newPollQuestion}
+              onChange={(e) => setNewPollQuestion(e.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="Options (comma separated, e.g. A,B)"
+              className="w-full bg-[#071320] border border-[#183a61] rounded-xl p-3 text-sm text-white"
+              value={newPollOptions}
+              onChange={(e) => setNewPollOptions(e.target.value)}
+            />
+            <button
+              onClick={() => {
+                const options = newPollOptions.split(',').map(o => ({ label: o.trim(), votes: 0 }));
+                setActivePoll({ id: Date.now().toString(), question: newPollQuestion, options });
+                setShowPollModal(false);
+              }}
+              className="w-full bg-amber-600 hover:bg-amber-500 text-stone-950 font-black py-3 rounded-xl text-sm"
+            >
+              Launch Poll
+            </button>
+            <button onClick={() => setShowPollModal(false)} className="w-full text-stone-400 text-xs">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* POLL OVERLAY FOR VIEWERS */}
+      {/* ========================================================= */}
+      {activePoll && (
+        <div className="absolute top-20 right-4 z-[99990] bg-[#0b1f36]/90 border border-amber-500/40 rounded-3xl p-4 w-64 text-white shadow-2xl backdrop-blur-md space-y-3">
+          <h4 className="font-black text-sm">{activePoll.question}</h4>
+          {activePoll.options.map((opt, i) => (
+            <button
+              key={i}
+              onClick={() => {
+                setActivePoll({
+                  ...activePoll,
+                  options: activePoll.options.map((o, idx) => idx === i ? { ...o, votes: o.votes + 1 } : o)
+                });
+              }}
+              className="w-full bg-[#071320] hover:bg-[#183a61] border border-[#183a61] p-2 rounded-xl text-xs flex justify-between"
+            >
+              <span>{opt.label}</span>
+              <span className="font-black text-emerald-400">{opt.votes} votes</span>
+            </button>
+          ))}
+          <button onClick={() => setActivePoll(null)} className="text-stone-400 text-[10px] w-full">Close Poll</button>
+        </div>
+      )}
+
+      {/* ========================================================= */}
       {/* MODAL 3: CHECKOUT SUCCESS MODAL */}
       {/* ========================================================= */}
       {showCheckoutModal && (
@@ -3768,6 +4376,127 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
               className="w-full bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black py-3 rounded-xl text-xs shadow-lg transition-transform active:scale-95"
             >
               Return to Family Cart
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL 4: REAL-TIME ANALYTICS & PEAK INTEREST DASHBOARD */}
+      {/* ========================================================= */}
+      {showAnalyticsModal && (
+        <div className="fixed inset-0 z-[99999] bg-stone-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+          <div className="bg-[#0b1f36] border-2 border-cyan-500/40 rounded-3xl p-5 sm:p-6 max-w-2xl w-full text-white shadow-2xl relative space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#183a61] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-cyan-500/20 text-cyan-400 rounded-2xl border border-cyan-400/30">
+                  <Sliders className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg text-white">Live Session Analytics & Engagement</h3>
+                  <p className="text-xs text-cyan-200">Real-time viewer concurrency, engagement metrics, & peak product interest timestamps</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowAnalyticsModal(false)}
+                className="text-stone-400 hover:text-white p-2 rounded-xl bg-white/5 hover:bg-white/15 cursor-pointer"
+                title="Close Dashboard"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quick Metrics Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-[#071320] border border-[#183a61] p-3.5 rounded-2xl space-y-1">
+                <span className="text-[10px] text-cyan-300 font-bold block uppercase">Peak Concurrency</span>
+                <span className="text-xl font-black text-white">3,410 viewers</span>
+                <span className="text-[10px] text-emerald-400 font-bold block">↑ +24% vs last session</span>
+              </div>
+
+              <div className="bg-[#071320] border border-[#183a61] p-3.5 rounded-2xl space-y-1">
+                <span className="text-[10px] text-amber-300 font-bold block uppercase">Cart Additions</span>
+                <span className="text-xl font-black text-amber-300">248 items</span>
+                <span className="text-[10px] text-emerald-400 font-bold block">⚡ 94.2% conversion</span>
+              </div>
+
+              <div className="bg-[#071320] border border-[#183a61] p-3.5 rounded-2xl space-y-1">
+                <span className="text-[10px] text-emerald-300 font-bold block uppercase">Engagement Rate</span>
+                <span className="text-xl font-black text-emerald-400">96.8%</span>
+                <span className="text-[10px] text-cyan-300 font-bold block">❤️ 18.4K total likes</span>
+              </div>
+
+              <div className="bg-[#071320] border border-[#183a61] p-3.5 rounded-2xl space-y-1">
+                <span className="text-[10px] text-purple-300 font-bold block uppercase">Avg Watch Time</span>
+                <span className="text-xl font-black text-purple-300">14m 22s</span>
+                <span className="text-[10px] text-cyan-300 font-bold block">High retention</span>
+              </div>
+            </div>
+
+            {/* Live Graph of Viewer Engagement */}
+            <div className="bg-[#071320] border border-[#183a61] p-4 rounded-2xl space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-extrabold text-xs sm:text-sm text-white flex items-center gap-2">
+                  <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
+                  <span>Live Viewer Engagement Graph (Concurrency over Time)</span>
+                </h4>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 px-2 py-0.5 rounded font-bold">
+                  LIVE STREAMING
+                </span>
+              </div>
+
+              {/* Simulated SVG Graph */}
+              <div className="h-36 w-full flex items-end gap-2 pt-6 px-2 relative border-b border-l border-stone-700">
+                {[40, 55, 65, 80, 95, 75, 88, 100, 85, 92].map((val, idx) => (
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group/bar">
+                    <span className="text-[8px] text-cyan-300 opacity-0 group-hover/bar:opacity-100 transition-opacity font-bold">
+                      {val * 34}
+                    </span>
+                    <div 
+                      className="w-full bg-gradient-to-t from-cyan-600 via-teal-500 to-emerald-400 rounded-t-lg transition-all duration-500 hover:brightness-125 shadow-lg"
+                      style={{ height: `${val}%` }}
+                    />
+                    <span className="text-[9px] text-stone-400">{idx * 2}m</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Peak Product Interest Timestamps */}
+            <div className="space-y-3">
+              <h4 className="font-extrabold text-xs sm:text-sm text-white">Peak Product Interest Timestamps</h4>
+              <div className="space-y-2 text-xs">
+                {[
+                  { time: '02:15', product: 'White Star Super Maize Meal (10kg)', interest: '96% Interest Spike', tag: '🔥 TOP PICK' },
+                  { time: '08:40', product: 'Mazoe Orange Crush Syrup (2L)', interest: '91% Cart Additions', tag: '🌟 VIRAL' },
+                  { time: '14:20', product: 'Dettol Herbal Hygiene Soap 4-pack', interest: '88% Quick Adds', tag: '⚡ HIGH DEMAND' },
+                  { time: '18:10', product: 'Tastic Parboiled Rice (10kg)', interest: '94% Peak Concurrency', tag: '🛒 BESTSELLER' }
+                ].map((peak, i) => (
+                  <div key={i} className="bg-[#071320] border border-[#183a61] p-3 rounded-2xl flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="bg-cyan-500/20 text-cyan-300 font-mono font-black text-xs px-2.5 py-1 rounded-xl border border-cyan-400/30">
+                        {peak.time}
+                      </span>
+                      <div>
+                        <span className="font-black text-white block">{peak.product}</span>
+                        <span className="text-[10px] text-emerald-400 font-bold">{peak.interest}</span>
+                      </div>
+                    </div>
+
+                    <span className="bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap">
+                      {peak.tag}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowAnalyticsModal(false)}
+              className="w-full bg-cyan-500 hover:bg-cyan-400 text-stone-950 font-black py-3 rounded-xl text-xs shadow-lg transition-transform active:scale-95 cursor-pointer"
+            >
+              Close Analytics Dashboard
             </button>
           </div>
         </div>

@@ -43,12 +43,15 @@ import {
   Upload,
   Camera,
   Receipt,
-  ShoppingBag
+  ShoppingBag,
+  History
 } from 'lucide-react';
-import { Currency } from '../types';
+import { Currency, Member, Product } from '../types';
 import { ALL_CURRENCIES, formatPrice } from '../utils/currency';
 import { OrdersAndInvoicesView } from './OrdersAndInvoicesView';
 import { STORES_BY_REGION, DEFAULT_REGION, DEFAULT_STORE } from '../data/stores';
+import { SAMPLE_PRODUCTS } from '../data/products';
+import { getProductImagePath, handleProductImageError } from '../utils/productImages';
 
 interface ProfileViewProps {
   currency: Currency;
@@ -59,12 +62,18 @@ interface ProfileViewProps {
   selectedStore?: string;
   onRegionChange?: (region: string) => void;
   onStoreChange?: (store: string) => void;
+  members?: Member[];
+  products?: Product[];
+  onAddToCart?: (productId: string, memberId: string, note?: string) => void;
+  onOpenWhatsAppSim?: () => void;
+  initialSubView?: SubViewType;
 }
 
 type SubViewType = 
   | null
   | 'orders'
   | 'invoices'
+  | 'history'
   | 'edit-details'
   | 'saved-addresses'
   | 'comm-prefs'
@@ -87,6 +96,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   selectedStore,
   onRegionChange,
   onStoreChange,
+  members = [],
+  products = SAMPLE_PRODUCTS,
+  onAddToCart,
+  onOpenWhatsAppSim,
+  initialSubView = null,
 }) => {
   const [internalRegion, setInternalRegion] = useState<string>(() => {
     try {
@@ -132,7 +146,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     showToast(`Preferred store branch updated to ${newStore}`);
   };
 
-  const [activeSubView, setActiveSubView] = useState<SubViewType>(null);
+  const [activeSubView, setActiveSubView] = useState<SubViewType>(initialSubView || null);
+
+  React.useEffect(() => {
+    if (initialSubView) {
+      setActiveSubView(initialSubView);
+    }
+  }, [initialSubView]);
+
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [historyCategoryFilter, setHistoryCategoryFilter] = useState<string>('ALL');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isLoggedOut, setIsLoggedOut] = useState(false);
   const [showLogOutModal, setShowLogOutModal] = useState(false);
@@ -411,6 +434,405 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               onCurrencyChange={onCurrencyChange}
               onShowToast={showToast}
             />
+          )}
+
+          {/* 0.5 PURCHASE HISTORY & PREVIOUSLY BOUGHT VIEW */}
+          {activeSubView === 'history' && (
+            <div className="bg-white rounded-3xl p-4 sm:p-6 border border-stone-200/80 shadow-xs space-y-6">
+              {/* Header Title */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-[#002D62]/10 text-[#002D62] rounded-2xl flex-shrink-0">
+                    <History className="w-6 h-6 text-[#002D62]" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-stone-900 text-lg sm:text-xl">Purchase History & Previously Bought</h3>
+                    <p className="text-xs text-stone-500">1-click re-order past staples, view previous orders, and restock family items in Zimbabwe</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2.5 py-1 rounded-full uppercase">
+                    10 Saved Staples
+                  </span>
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded-full uppercase">
+                    3 Completed Orders
+                  </span>
+                </div>
+              </div>
+
+              {/* Search Bar & Category Filters */}
+              <div className="space-y-3">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={historySearchQuery}
+                    onChange={(e) => setHistorySearchQuery(e.target.value)}
+                    placeholder="Search past bought groceries (e.g. Tastic Rice, Mazoe, Sunfoil Oil)..."
+                    className="w-full bg-stone-50 border border-stone-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs font-semibold text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#002D62] focus:bg-white transition-all"
+                  />
+                  <Clock className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  {historySearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setHistorySearchQuery('')}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 text-xs font-bold"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                  {['ALL', 'Staples', 'Cooking & Oils', 'Beverages', 'Household & Cleaning', 'Dairy & Fresh'].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setHistoryCategoryFilter(cat)}
+                      className={`text-[11px] font-bold px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
+                        historyCategoryFilter === cat
+                          ? 'bg-[#002D62] text-white shadow-xs'
+                          : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Previously Bought Items Grid */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-extrabold text-stone-900 text-sm flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4 text-[#002D62]" />
+                    <span>Frequently Bought Grocery Staples</span>
+                  </h4>
+                  <span className="text-[11px] text-stone-400">Click &quot;Buy Again&quot; to re-add to cart</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                  {[
+                    {
+                      id: 'prod-1',
+                      name: 'Tastic Parboiled Rice (10kg)',
+                      category: 'Staples',
+                      priceUSD: 14.50,
+                      unit: '10kg Bag',
+                      image: '/images/tastic_rice.jpg',
+                      timesBought: 6,
+                      lastOrdered: '24 Jul 2026',
+                      boughtFor: 'Gogo Moyo',
+                      memberId: 'mem-2',
+                      tag: '⭐ MOST BOUGHT'
+                    },
+                    {
+                      id: 'prod-2',
+                      name: 'Mazoe Blackberry Flavoured Syrup (2L)',
+                      category: 'Beverages',
+                      priceUSD: 5.50,
+                      unit: '2 Litre Bottle',
+                      image: '/images/mazoe_blackberry.jpg',
+                      timesBought: 5,
+                      lastOrdered: '24 Jul 2026',
+                      boughtFor: 'Gogo Moyo',
+                      memberId: 'mem-2',
+                      tag: '🍇 FAMILY FAVOURITE'
+                    },
+                    {
+                      id: 'prod-3',
+                      name: 'Sunfoil Pure Sunflower Cooking Oil (2L)',
+                      category: 'Cooking & Oils',
+                      priceUSD: 4.12,
+                      unit: '2 Litre Bottle',
+                      image: '/images/sunfoil_oil.jpg',
+                      timesBought: 4,
+                      lastOrdered: '24 Jul 2026',
+                      boughtFor: 'Tinashe Moyo',
+                      memberId: 'mem-3',
+                      tag: '🍳 PANTRY STAPLE'
+                    },
+                    {
+                      id: 'prod-5',
+                      name: 'White Star Super Maize Meal (10kg)',
+                      category: 'Staples',
+                      priceUSD: 5.78,
+                      unit: '10kg Sack',
+                      image: '/images/white_star_maize.jpg',
+                      timesBought: 7,
+                      lastOrdered: '24 Jul 2026',
+                      boughtFor: 'Gogo Moyo',
+                      memberId: 'mem-2',
+                      tag: '🌽 #1 STAPLE'
+                    },
+                    {
+                      id: 'prod-4',
+                      name: 'Huletts SunSweet Pure White Sugar (2kg)',
+                      category: 'Staples',
+                      priceUSD: 2.85,
+                      unit: '2kg Bag',
+                      image: '/images/huletts_sugar.jpg',
+                      timesBought: 3,
+                      lastOrdered: '10 Jul 2026',
+                      boughtFor: 'Uncle Farai',
+                      memberId: 'mem-1',
+                      tag: '🍬 DAILY'
+                    },
+                    {
+                      id: 'prod-6',
+                      name: 'Iwisa No.1 Super Maize Meal (10kg)',
+                      category: 'Staples',
+                      priceUSD: 6.20,
+                      unit: '10kg Sack',
+                      image: '/images/white_star_maize.jpg',
+                      timesBought: 4,
+                      lastOrdered: '10 Jul 2026',
+                      boughtFor: 'Tinashe Moyo',
+                      memberId: 'mem-3',
+                      tag: '🌽 BRAAI READY'
+                    },
+                    {
+                      id: 'prod-7',
+                      name: 'Dettol Herbal Hygiene Soap (175g 4-pack)',
+                      category: 'Household & Cleaning',
+                      priceUSD: 2.95,
+                      unit: '4x175g Pack',
+                      image: '/images/dettol_soap.jpg',
+                      timesBought: 3,
+                      lastOrdered: '10 Jul 2026',
+                      boughtFor: 'Uncle Farai',
+                      memberId: 'mem-1',
+                      tag: '🧼 HYGIENE'
+                    },
+                    {
+                      id: 'prod-8',
+                      name: 'Clover Fresh Full Cream Milk (2L)',
+                      category: 'Dairy & Fresh',
+                      priceUSD: 2.10,
+                      unit: '2L Bottle',
+                      image: '/images/clover_milk.jpg',
+                      timesBought: 2,
+                      lastOrdered: '28 Jun 2026',
+                      boughtFor: 'Gogo Moyo',
+                      memberId: 'mem-2',
+                      tag: '🥛 FRESH'
+                    },
+                    {
+                      id: 'prod-10',
+                      name: 'Sunlight Auto Washing Powder (2kg)',
+                      category: 'Household & Cleaning',
+                      priceUSD: 4.80,
+                      unit: '2kg Box',
+                      image: '/images/sunlight_soap.jpg',
+                      timesBought: 3,
+                      lastOrdered: '28 Jun 2026',
+                      boughtFor: 'Uncle Farai',
+                      memberId: 'mem-1',
+                      tag: '✨ CLEANING'
+                    }
+                  ]
+                    .filter((item) => {
+                      const matchesSearch = item.name.toLowerCase().includes(historySearchQuery.toLowerCase()) ||
+                        item.category.toLowerCase().includes(historySearchQuery.toLowerCase()) ||
+                        item.boughtFor.toLowerCase().includes(historySearchQuery.toLowerCase());
+                      const matchesCategory = historyCategoryFilter === 'ALL' || item.category === historyCategoryFilter;
+                      return matchesSearch && matchesCategory;
+                    })
+                    .map((item) => (
+                      <div
+                        key={item.id}
+                        className="bg-stone-50 border border-stone-200/90 hover:border-[#002D62]/40 rounded-2xl p-3 flex flex-col justify-between transition-all group shadow-2xs hover:shadow-xs"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-stone-900 border border-stone-200 flex-shrink-0">
+                            <img
+                              src={getProductImagePath(item.image)}
+                              alt={item.name}
+                              onError={(e) => handleProductImageError(e, item.name, 'PANTRY')}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                            <span className="absolute top-1 left-1 bg-[#D0021B] text-white text-[7px] font-black px-1 py-0.2 rounded uppercase">
+                              {item.timesBought}x
+                            </span>
+                          </div>
+
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-[9px] font-black text-[#002D62] bg-blue-50 px-1.5 py-0.2 rounded">
+                                {item.tag}
+                              </span>
+                              <span className="text-[9px] text-stone-400">
+                                {item.lastOrdered}
+                              </span>
+                            </div>
+
+                            <h5 className="font-extrabold text-xs text-stone-900 truncate group-hover:text-[#002D62] transition-colors">
+                              {item.name}
+                            </h5>
+                            <p className="text-[10px] text-stone-500 truncate">{item.unit} • For {item.boughtFor}</p>
+
+                            <div className="flex items-baseline gap-1.5 pt-1">
+                              <span className="font-black text-xs text-emerald-700">
+                                {formatPrice(item.priceUSD, currency)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Buy Again Button */}
+                        <div className="pt-2.5 mt-2 border-t border-stone-200/70 flex items-center justify-between gap-2">
+                          <span className="text-[10px] text-stone-500 font-medium">
+                            Bought {item.timesBought} times
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onAddToCart) {
+                                onAddToCart(item.id, item.memberId, `Re-ordered from Purchase History`);
+                              }
+                              showToast(`Added ${item.name} to Family Cart! 🛒`);
+                            }}
+                            className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Buy Again</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Past Order Delivery Slips */}
+              <div className="space-y-3 pt-2 border-t border-stone-200/80">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-extrabold text-stone-900 text-sm flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-[#002D62]" />
+                    <span>Past Order Slips & Deliveries ({3})</span>
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubView('orders')}
+                    className="text-xs text-[#002D62] font-bold hover:underline"
+                  >
+                    View Official Tax Invoices →
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    {
+                      orderId: 'ZKS-8921',
+                      date: '24 Jul 2026',
+                      status: 'Delivered',
+                      deliveryMode: 'Door Delivery Express',
+                      destination: 'House 42, Bath Road, Avondale, Harare',
+                      storeName: 'TM Pick n Pay Msasa Hyper (Harare)',
+                      totalUSD: 48.50,
+                      recipient: 'Gogo Moyo (+263 77 234 5678)',
+                      items: [
+                        { id: 'prod-1', name: 'Tastic Parboiled Rice (10kg)', qty: 1, priceUSD: 14.50 },
+                        { id: 'prod-2', name: 'Mazoe Blackberry Flavoured Syrup (2L)', qty: 2, priceUSD: 11.00 },
+                        { id: 'prod-3', name: 'Sunfoil Pure Sunflower Cooking Oil (2L)', qty: 1, priceUSD: 4.12 },
+                        { id: 'prod-5', name: 'White Star Super Maize Meal (10kg)', qty: 1, priceUSD: 5.78 }
+                      ]
+                    },
+                    {
+                      orderId: 'ZKS-7740',
+                      date: '10 Jul 2026',
+                      status: 'Delivered',
+                      deliveryMode: 'Store Pickup (Click & Collect)',
+                      destination: 'Fife St & 12th Ave Depot, Bulawayo',
+                      storeName: 'TM Pick n Pay Bulawayo Hyper',
+                      totalUSD: 62.10,
+                      recipient: 'Tinashe Moyo (+263 71 987 6543)',
+                      items: [
+                        { id: 'prod-6', name: 'Iwisa No.1 Super Maize Meal (10kg)', qty: 2, priceUSD: 12.40 },
+                        { id: 'prod-4', name: 'Huletts SunSweet Pure Sugar (2kg)', qty: 2, priceUSD: 5.70 },
+                        { id: 'prod-7', name: 'Dettol Herbal Hygiene Soap 4-pack', qty: 2, priceUSD: 5.90 },
+                        { id: 'prod-10', name: 'Sunlight Auto Washing Powder (2kg)', qty: 1, priceUSD: 4.80 }
+                      ]
+                    }
+                  ].map((ord) => (
+                    <div
+                      key={ord.orderId}
+                      className="bg-stone-50 border border-stone-200 rounded-2xl p-4 space-y-3"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-200/60 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-stone-900 text-sm">{ord.orderId}</span>
+                          <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            {ord.status}
+                          </span>
+                          <span className="text-xs text-stone-400 font-medium">• {ord.date}</span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="font-black text-sm text-stone-900">
+                            {formatPrice(ord.totalUSD, currency)}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              showToast(`📺 Opening recorded stream for order ${ord.orderId}...`);
+                            }}
+                            className="bg-[#0b1f36] hover:bg-[#1a406b] text-cyan-300 font-extrabold text-[11px] px-3 py-1.5 rounded-xl transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 border border-cyan-400/30"
+                          >
+                            <Video className="w-3 h-3 text-cyan-400" />
+                            <span>Rejoin</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              ord.items.forEach((it) => {
+                                if (onAddToCart) {
+                                  onAddToCart(it.id, 'mem-2', `Re-order from ${ord.orderId}`);
+                                }
+                              });
+                              showToast(`Re-added all items from ${ord.orderId} to Family Cart! 🛒`);
+                            }}
+                            className="bg-[#002D62] hover:bg-[#001D42] text-white font-extrabold text-[11px] px-3 py-1.5 rounded-xl transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                          >
+                            <RotateCcw className="w-3 h-3 text-[#FFB81C]" />
+                            <span>Re-order Basket</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-stone-600 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Store className="w-3.5 h-3.5 text-[#002D62]" />
+                          <span>Fulfillment Store: <strong className="text-stone-900">{ord.storeName}</strong></span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-3.5 h-3.5 text-stone-400" />
+                          <span>Delivered to: {ord.destination} ({ord.recipient})</span>
+                        </div>
+                      </div>
+
+                      {/* Items mini-list */}
+                      <div className="bg-white p-2.5 rounded-xl border border-stone-200/70 divide-y divide-stone-100 text-xs">
+                        {ord.items.map((it, idx) => (
+                          <div key={idx} className="py-1 first:pt-0 last:pb-0 flex items-center justify-between">
+                            <span className="text-stone-800 font-medium">
+                              {it.qty}x {it.name}
+                            </span>
+                            <span className="font-bold text-stone-900">
+                              {formatPrice(it.priceUSD, currency)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
 
           {/* 1. EDIT MY DETAILS VIEW */}
