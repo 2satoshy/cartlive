@@ -73,23 +73,7 @@ export default function App() {
     }
   }, [personalCart]);
 
-  // Personal Cart (for viewers & participants to have their own individual cart)
-  const [personalCart, setPersonalCart] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('pnp_personal_cart');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('pnp_personal_cart', JSON.stringify(personalCart));
-    } catch {
-      // ignore
-    }
-  }, [personalCart]);
 
   // Preferred Store & Region State (Managed from Profile Page)
   const [selectedRegion, setSelectedRegion] = useState<string>(() => {
@@ -601,11 +585,14 @@ export default function App() {
         {activeTab === 'cart' && (
           <FamilyCart
             cart={cart}
+            personalCart={personalCart}
             members={members}
             currency={currency}
             exchangeRates={exchangeRates}
             onUpdateQuantity={handleUpdateQuantity}
+            onUpdatePersonalQuantity={handleUpdatePersonalQuantity}
             onClearCart={handleClearCart}
+            onClearPersonalCart={handleClearPersonalCart}
             onClose={() => setActiveTab('home')}
             onOpenWhatsAppSim={() => setShowWhatsAppSim(true)}
             onAddToCart={(productId, memberId, note) => handleAddToCart(productId, memberId, note)}

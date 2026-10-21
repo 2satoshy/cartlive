@@ -64,9 +64,12 @@ PORT=3000
           <div className="flex items-center gap-2.5">
             <button
               onClick={onClose}
-              className="p-1 text-stone-200 hover:text-white rounded-lg sm:hidden"
+              className="flex items-center gap-1.5 text-stone-200 hover:text-white bg-white/10 hover:bg-white/20 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex-shrink-0"
+              title="Back"
+              aria-label="Back"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
             </button>
 
             <div className="bg-[#d4af37] text-black p-2 rounded-xl font-bold flex-shrink-0">

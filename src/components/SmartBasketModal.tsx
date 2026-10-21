@@ -23,6 +23,7 @@ import {
   Info,
   Layers,
   CheckCircle2,
+  ArrowLeft,
   Video
 } from 'lucide-react';
 import { Product, Currency, Member } from '../types';
@@ -309,8 +310,17 @@ export const SmartBasketModal: React.FC<SmartBasketModalProps> = ({
           className="relative w-full max-w-md bg-gradient-to-b from-[#0c2a38] via-[#0f3d4f] to-[#0a1e29] border border-cyan-500/30 rounded-3xl shadow-2xl overflow-hidden text-white flex flex-col max-h-[92vh]"
         >
           {/* Header Bar */}
-          <div className="p-3.5 sm:p-4 bg-[#0a232e]/90 border-b border-cyan-500/20 flex items-center justify-between relative z-20">
+          <div className="p-3 sm:p-4 bg-[#0a232e]/90 border-b border-cyan-500/20 flex items-center justify-between relative z-20">
             <div className="flex items-center gap-2">
+              <button
+                onClick={onClose}
+                className="flex items-center gap-1.5 text-cyan-200 hover:text-white bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/30 px-2.5 py-1 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer mr-1"
+                aria-label="Back"
+                title="Back"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
               <div className="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-cyan-300 animate-pulse" />
               </div>

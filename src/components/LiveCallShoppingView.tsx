@@ -51,7 +51,9 @@ import {
   UserCheck,
   BadgePercent,
   ShoppingCart,
-  Tag
+  Tag,
+  Copy,
+  BarChart2
 } from 'lucide-react';
 import { CartItem, Member, Currency, SplitMethod, ExchangeRates, Product, ProductCategory, LiveMenuProduct, LiveMenuUpload } from '../types';
 import { formatPrice } from '../utils/currency';
@@ -1384,13 +1386,11 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
     return (
       <div className="min-h-screen bg-[#071320] text-white flex flex-col font-sans select-none pb-28">
 
+
+
         {/* Horizontal Scrollable Live Users / Hosts Bar */}
         <div className="bg-[#091828] border-b border-[#18395e] py-3 px-4">
-          <div className="max-w-2xl mx-auto">
-            <div className="text-[11px] font-black uppercase text-emerald-400 tracking-wider mb-2 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>Family Live Call Hosts</span>
-            </div>
+
             <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
               {[
                 { id: 'host-1', name: 'Tinashe', location: 'Johannesburg', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', status: 'LIVE' },
@@ -1433,7 +1433,6 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
                 </div>
               ))}
             </div>
-          </div>
         </div>
 
         {/* Vertical Timeline Feed */}
@@ -1593,10 +1592,56 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
                       </span>
                     )}
 
-                    <span className="bg-black/60 backdrop-blur-md text-cyan-200 border border-cyan-400/30 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <span className="bg-black/60 backdrop-blur-md text-cyan-200 border border-cyan-400/30 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-md">
                       <Users className="w-3 h-3 text-cyan-400 animate-pulse" />
-                      {(liveViewerCounts[HERO_PREVIEW_SLIDES[activeHeroSlideIndex].id] || HERO_PREVIEW_SLIDES[activeHeroSlideIndex].viewers).toLocaleString()} watching
+                      <span>{(liveViewerCounts[HERO_PREVIEW_SLIDES[activeHeroSlideIndex].id] || HERO_PREVIEW_SLIDES[activeHeroSlideIndex].viewers).toLocaleString()}</span>
                     </span>
+
+                    {/* Quick Overlay Action Icons */}
+                    <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full border border-cyan-400/30 shadow-md">
+                      {/* WhatsApp Share Icon */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://pnp.co.zw/live';
+                          const shareText = `🛒 Join my live TM Pick n Pay shopping session! Watch live feeds & shop together: ${currentUrl}`;
+                          const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+                          if (typeof window !== 'undefined') {
+                            window.open(whatsappUrl, '_blank');
+                          }
+                          setCallToast('💬 Opening WhatsApp to invite friends!');
+                          setTimeout(() => setCallToast(null), 3000);
+                        }}
+                        className="p-1 rounded-full hover:bg-emerald-600/40 text-emerald-300 transition-all cursor-pointer active:scale-95"
+                        title="Invite via WhatsApp"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                      </button>
+
+                      {/* Copy Deep Link Icon */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShareLiveLink();
+                        }}
+                        className="p-1 rounded-full hover:bg-blue-600/40 text-cyan-300 transition-all cursor-pointer active:scale-95"
+                        title="Copy Live Link"
+                      >
+                        <Copy className="w-3.5 h-3.5 text-cyan-300" />
+                      </button>
+
+                      {/* Live Analytics Dashboard Icon */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowAnalyticsModal(true);
+                        }}
+                        className="p-1 rounded-full hover:bg-amber-600/40 text-amber-300 transition-all cursor-pointer active:scale-95"
+                        title="Live Analytics & Peak Product Interest"
+                      >
+                        <BarChart2 className="w-3.5 h-3.5 text-[#ffb703]" />
+                      </button>
+                    </div>
 
                     <span className="bg-stone-900/70 backdrop-blur-md text-amber-300 border border-amber-400/30 text-[10px] font-bold px-2 py-1 rounded-full hidden sm:flex items-center gap-1">
                       📍 {HERO_PREVIEW_SLIDES[activeHeroSlideIndex].location}
@@ -1638,90 +1683,9 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
                     {HERO_PREVIEW_SLIDES[activeHeroSlideIndex].description}
                   </p>
 
-                  {/* Host info pill & Start call button with Floating Cart button icon placed directly above */}
-                  <div className="pt-2 flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex flex-col items-start gap-1.5">
-                      {/* Floating Cart Button icon placed DIRECTLY ABOVE Start Live Call Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowPersonalCartDrawer(true);
-                        }}
-                        className="group bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-extrabold px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 cursor-pointer border border-emerald-300/40"
-                        title="View Personal Cart & Family Cart"
-                      >
-                        <span className="relative flex items-center justify-center">
-                          <ShoppingCart className="w-4 h-4 text-white" />
-                          {(personalCart.length > 0 || cart.length > 0) && (
-                            <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white text-[9px] font-black min-w-[16px] h-4 px-0.5 rounded-full flex items-center justify-center border border-white">
-                              {personalCart.reduce((s, i) => s + i.quantity, 0) + cart.reduce((s, i) => s + i.quantity, 0)}
-                            </span>
-                          )}
-                        </span>
-                        <span>My Cart ({personalCart.reduce((s, i) => s + i.quantity, 0)})</span>
-                        <ArrowRight className="w-3 h-3 text-emerald-200 group-hover:translate-x-0.5 transition-transform" />
-                      </button>
 
-                      {/* Start New Live Shopping Call Button */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onStartLiveCall) onStartLiveCall();
-                          }}
-                          className="bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black px-5 py-2.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2 shadow-xl shadow-emerald-500/30 transition-all active:scale-95 cursor-pointer"
-                        >
-                          <Video className="w-4 h-4" />
-                          <span>Start New Live Shopping Call</span>
-                        </button>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://pnp.co.zw/live';
-                            const shareText = `🛒 Join my live TM Pick n Pay shopping session! Watch live feeds and shop groceries together: ${currentUrl}`;
-                            
-                            // Try to open WhatsApp directly
-                            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-                            window.open(whatsappUrl, '_blank');
-                            
-                            setCallToast('💬 Opening WhatsApp to share your live session invite...');
-                            setTimeout(() => setCallToast(null), 3500);
-                          }}
-                          className="bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold px-4 py-2.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
-                          title="Invite friends via WhatsApp"
-                        >
-                          <span className="text-white">💬</span>
-                          <span>Invite via WhatsApp</span>
-                        </button>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleShareLiveLink();
-                          }}
-                          className="bg-[#123154] hover:bg-[#1a416e] text-cyan-300 border border-cyan-400/40 font-extrabold px-4 py-2.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
-                          title="Copy live session invite link"
-                        >
-                          <ExternalLink className="w-4 h-4 text-cyan-300" />
-                          <span>Copy Link</span>
-                        </button>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowAnalyticsModal(true);
-                          }}
-                          className="bg-[#092544] hover:bg-[#123154] text-emerald-300 border border-emerald-400/40 font-extrabold px-4 py-2.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
-                          title="View Real-Time Analytics & Peak Product Interest"
-                        >
-                          <Sliders className="w-4 h-4 text-emerald-400" />
-                          <span>Live Analytics</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 bg-[#091d33]/80 border border-blue-400/20 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+                  <div className="flex items-center gap-2 bg-[#091d33]/80 border border-blue-400/20 px-3 py-1.5 rounded-xl self-start sm:self-auto">
                       <img
                         src={HERO_PREVIEW_SLIDES[activeHeroSlideIndex].hostAvatar}
                         alt={HERO_PREVIEW_SLIDES[activeHeroSlideIndex].hostName}
@@ -1736,7 +1700,6 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
                         </span>
                       </div>
                     </div>
-                  </div>
                 </div>
 
                 {/* Floating Expand Video Center Prompt Hint */}
@@ -2544,7 +2507,7 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
                         image: activeMentionedProduct.image,
                         unit: activeMentionedProduct.unit,
                         category: activeMentionedProduct.category || 'PANTRY'
-                      });
+                      } as any);
                       setCallToast(`🛒 Added ${activeMentionedProduct.name} to Personal Cart!`);
                       setTimeout(() => setCallToast(null), 3000);
                     }}
@@ -2920,6 +2883,19 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
       {/* 1. TOP DEDICATED HEADER BAR */}
       <header className="bg-[#0b1f36] border-b border-[#18395e] px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-1.5 sm:gap-2 sticky top-0 z-50 shadow-xl overflow-x-hidden">
         <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1">
+          <button
+            onClick={() => {
+              if (onLeaveCall) onLeaveCall();
+              else if (onEndCall) onEndCall();
+            }}
+            className="flex items-center gap-1 text-blue-200 hover:text-white bg-white/10 hover:bg-white/20 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
+            title="Back to Catalog"
+            aria-label="Back to Catalog"
+          >
+            <ArrowLeft className="w-4 h-4 text-emerald-400" />
+            <span className="hidden xs:inline">Back</span>
+          </button>
+
           <div className="p-1 sm:p-2 bg-emerald-500/20 border border-emerald-400/40 rounded-xl flex items-center gap-1 shrink-0">
             <Video className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 animate-pulse" />
           </div>
@@ -4132,12 +4108,22 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
             </button>
 
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 bg-cyan-600/20 border border-cyan-400/30 rounded-2xl">
-                <UserPlus className="w-6 h-6 text-cyan-400" />
+              <button
+                type="button"
+                onClick={() => setShowAddMemberModal(false)}
+                className="flex items-center gap-1.5 text-cyan-200 hover:text-white bg-white/10 hover:bg-white/20 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
+                title="Back"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
+              <div className="p-2 bg-cyan-600/20 border border-cyan-400/30 rounded-2xl shrink-0">
+                <UserPlus className="w-5 h-5 text-cyan-400" />
               </div>
-              <div>
-                <h3 className="font-extrabold text-base text-white">Invite Family Member to Call</h3>
-                <p className="text-xs text-blue-200/70">Connect video or audio live for collaborative shopping</p>
+              <div className="min-w-0">
+                <h3 className="font-extrabold text-sm sm:text-base text-white truncate">Invite Family Member to Call</h3>
+                <p className="text-[11px] text-blue-200/70 truncate">Connect video or audio live for collaborative shopping</p>
               </div>
             </div>
 
@@ -4232,14 +4218,24 @@ export const LiveCallShoppingView: React.FC<LiveCallShoppingViewProps> = ({
             </button>
 
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 bg-emerald-500/20 border border-emerald-400/40 rounded-2xl">
-                <Plus className="w-6 h-6 text-emerald-400" />
+              <button
+                type="button"
+                onClick={() => setShowQuickAddModal(false)}
+                className="flex items-center gap-1.5 text-cyan-200 hover:text-white bg-white/10 hover:bg-white/20 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
+                title="Back"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
+              <div className="p-2 bg-emerald-500/20 border border-emerald-400/40 rounded-2xl shrink-0">
+                <Plus className="w-5 h-5 text-emerald-400" />
               </div>
-              <div>
-                <h3 className="font-extrabold text-base text-white">
+              <div className="min-w-0">
+                <h3 className="font-extrabold text-sm sm:text-base text-white truncate">
                   Add Item for {selectedMemberForAdd ? selectedMemberForAdd.name : 'Family Member'}
                 </h3>
-                <p className="text-xs text-blue-200/70">Select staples to add directly to the Live Cart</p>
+                <p className="text-[11px] text-blue-200/70 truncate">Select staples to add directly to the Live Cart</p>
               </div>
             </div>
 

@@ -12,7 +12,8 @@ import {
   CheckCircle2, 
   AlertCircle,
   Phone,
-  Info
+  Info,
+  ArrowLeft
 } from 'lucide-react';
 import { Member, DeliveryAddress, DeliveryType, StoreId } from '../types';
 
@@ -270,16 +271,25 @@ export const DeliveryAddressModal: React.FC<DeliveryAddressModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-stone-950/70 backdrop-blur-xs animate-fadeIn overflow-y-auto">
       <div className="bg-white rounded-3xl max-w-xl w-full border border-stone-200 shadow-2xl overflow-hidden my-auto">
         {/* Header Bar */}
-        <div className="bg-[#1a115e] text-white p-4 sm:p-5 flex items-center justify-between relative">
-          <div className="flex items-center gap-3">
+        <div className="bg-[#1a115e] text-white p-3.5 sm:p-5 flex items-center justify-between relative">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1.5 text-stone-200 hover:text-white bg-white/10 hover:bg-white/20 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex-shrink-0 mr-0.5"
+              title="Back"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
             <img
               src={member.avatar}
               alt={member.name}
-              className="w-11 h-11 rounded-full object-cover border-2 border-[#ffb81c] shadow-md"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 border-[#ffb81c] shadow-md flex-shrink-0"
             />
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-black text-base sm:text-lg text-white">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-black text-sm sm:text-lg text-white">
                   Delivery Destination for {member.name}
                 </h3>
                 <span className="bg-[#ffb81c] text-[#1a115e] text-[10px] font-black px-2 py-0.5 rounded-full">

@@ -15,7 +15,8 @@ import {
   Filter,
   ArrowUpDown,
   X,
-  Package
+  Package,
+  ArrowLeft
 } from 'lucide-react';
 import { Product, Currency, Member } from '../types';
 import { formatPrice } from '../utils/currency';
@@ -27,6 +28,7 @@ interface DiscoverViewProps {
   onAddToCart: (product: Product, memberId: string, quantity?: number) => void;
   onOpenVoiceAI: () => void;
   onOpenWhatsAppSim: () => void;
+  onBack?: () => void;
 }
 
 export const DiscoverView: React.FC<DiscoverViewProps> = ({
@@ -36,6 +38,7 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
   onAddToCart,
   onOpenVoiceAI,
   onOpenWhatsAppSim,
+  onBack,
 }) => {
   const [addedBundleId, setAddedBundleId] = useState<string | null>(null);
 
@@ -223,7 +226,18 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
   ];
 
   return (
-    <div className="space-y-6 pb-20 sm:pb-6">
+    <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-6">
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-stone-700 hover:text-[#002D62] bg-white hover:bg-stone-50 border border-stone-200/80 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all active:scale-95 cursor-pointer shadow-2xs w-fit"
+          title="Back to Store Catalog"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#002D62]" />
+          <span>Back to Store Catalog</span>
+        </button>
+      )}
+
       {/* Hero Banner */}
       <div className="bg-gradient-to-r from-[#1a115e] via-[#241a7d] to-[#100a3d] text-white rounded-2xl p-5 sm:p-7 shadow-md border border-[#2a1d82] relative overflow-hidden">
         <div className="relative z-10 space-y-2 max-w-2xl">

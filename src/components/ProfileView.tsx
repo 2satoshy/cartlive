@@ -44,7 +44,8 @@ import {
   Camera,
   Receipt,
   ShoppingBag,
-  History
+  History,
+  Video
 } from 'lucide-react';
 import { Currency, Member, Product } from '../types';
 import { ALL_CURRENCIES, formatPrice } from '../utils/currency';
@@ -67,6 +68,7 @@ interface ProfileViewProps {
   onAddToCart?: (productId: string, memberId: string, note?: string) => void;
   onOpenWhatsAppSim?: () => void;
   initialSubView?: SubViewType;
+  onBack?: () => void;
 }
 
 type SubViewType = 
@@ -101,6 +103,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onAddToCart,
   onOpenWhatsAppSim,
   initialSubView = null,
+  onBack,
 }) => {
   const [internalRegion, setInternalRegion] = useState<string>(() => {
     try {
@@ -1664,7 +1667,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       ) : (
         /* --- MAIN "MY ACCOUNT" MENU HUB (Matches User Screenshots) --- */
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex items-center gap-1.5 text-stone-700 hover:text-[#002D62] font-extrabold text-xs bg-white hover:bg-stone-50 border border-stone-200/80 px-3 py-1.5 rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs w-fit"
+              title="Back to Store Catalog"
+            >
+              <ArrowLeft className="w-4 h-4 text-[#002D62]" />
+              <span>Back to Store Catalog</span>
+            </button>
+          )}
+
           {/* Header User Card */}
           <div className="bg-gradient-to-r from-[#002D62] via-[#003B80] to-[#001D42] text-white rounded-3xl p-5 sm:p-6 shadow-md border border-[#004A99] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">

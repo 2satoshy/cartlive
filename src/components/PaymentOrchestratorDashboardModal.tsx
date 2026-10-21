@@ -16,7 +16,8 @@ import {
   Terminal,
   Activity,
   FileCheck,
-  CreditCard
+  CreditCard,
+  ArrowLeft
 } from 'lucide-react';
 import { PaymentOrchestratorLog, PaymentRail } from '../types';
 
@@ -87,8 +88,17 @@ export const PaymentOrchestratorDashboardModal: React.FC<PaymentOrchestratorDash
         
         {/* Header */}
         <div className="bg-gradient-to-r from-[#0b1f33] via-[#0e2a47] to-[#143456] p-4 sm:p-5 text-white flex items-center justify-between border-b border-white/10 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1.5 text-stone-200 hover:text-white bg-white/10 hover:bg-white/20 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer mr-0.5"
+              title="Back"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0">
               <Activity className="w-5 h-5" />
             </div>
             <div>

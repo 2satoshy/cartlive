@@ -693,11 +693,12 @@ export const VoiceAIAssistant: React.FC<VoiceAIAssistantProps> = ({
           <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={onClose}
-              className="p-1.5 text-stone-200 hover:text-white rounded-lg hover:bg-[#241a7d] sm:hidden cursor-pointer flex-shrink-0"
-              title="Close Assistant"
-              aria-label="Close Assistant"
+              className="flex items-center gap-1.5 text-stone-200 hover:text-white bg-white/10 hover:bg-white/20 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex-shrink-0"
+              title="Back to shopping"
+              aria-label="Back"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
             </button>
 
             <div className="bg-[#ffb81c] text-[#1a115e] p-1.5 sm:p-2 rounded-xl flex-shrink-0 font-extrabold shadow-sm">

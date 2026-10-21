@@ -28,7 +28,8 @@ import {
   LocateFixed,
   Star,
   ExternalLink,
-  Car
+  Car,
+  ArrowLeft
 } from 'lucide-react';
 import { Member, StoreId, Currency, Product } from '../types';
 import { SAMPLE_PRODUCTS } from '../data/products';
@@ -43,6 +44,7 @@ interface MyShopViewProps {
   onSelectStoreFilter?: (storeId: StoreId) => void;
   onOpenWhatsAppSim: () => void;
   initialSection?: 'frequent' | 'orders' | 'previouslyBought';
+  onBack?: () => void;
 }
 
 export interface PnPBranch {
@@ -339,6 +341,7 @@ export const MyShopView: React.FC<MyShopViewProps> = ({
   onSelectStoreFilter,
   onOpenWhatsAppSim,
   initialSection = 'frequent',
+  onBack,
 }) => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [activeTab, setActiveTab] = useState<'depots' | 'myitems' | 'family'>('depots');
@@ -479,7 +482,18 @@ export const MyShopView: React.FC<MyShopViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-20 sm:pb-6 relative">
+    <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-6 relative">
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-stone-700 hover:text-[#002D62] bg-white hover:bg-stone-50 border border-stone-200/80 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all active:scale-95 cursor-pointer shadow-2xs w-fit"
+          title="Back to Store Catalog"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#002D62]" />
+          <span>Back to Store Catalog</span>
+        </button>
+      )}
+
       {/* Toast Notification Banner */}
       {toastMsg && (
         <div className="fixed bottom-20 sm:bottom-6 right-4 z-50 bg-[#002D62] text-[#FFB81C] px-4 py-3 rounded-2xl shadow-2xl border border-[#004A99]/40 flex items-center gap-3 animate-fade-in max-w-sm text-xs font-bold">

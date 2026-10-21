@@ -13,6 +13,7 @@ import {
   Sparkles,
   Heart,
   Globe,
+  ArrowLeft,
   Image as ImageIcon
 } from 'lucide-react';
 import { Product, Currency, Member } from '../types';
@@ -83,12 +84,21 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     <div className="fixed inset-0 z-[9999999] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm overflow-y-auto animate-fadeIn">
       <div className="relative bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-stone-200 overflow-hidden my-auto">
         {/* Header Bar */}
-        <div className="bg-[#C51D4A] text-white px-5 py-3.5 flex items-center justify-between">
+        <div className="bg-[#C51D4A] text-white px-4 sm:px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="bg-[#FFB81C] text-[#002D62] text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1.5 text-white bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer mr-1"
+              aria-label="Back to products"
+              title="Back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+            <span className="bg-[#FFB81C] text-[#002D62] text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider hidden xs:inline-block">
               Dedicated Product Link
             </span>
-            <span className="text-xs font-mono font-bold text-rose-100 truncate max-w-[200px] sm:max-w-[320px]">
+            <span className="text-xs font-mono font-bold text-rose-100 truncate max-w-[140px] xs:max-w-[200px] sm:max-w-[320px]">
               /{slug}
             </span>
           </div>

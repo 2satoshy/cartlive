@@ -18,6 +18,7 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
+  ArrowLeft,
   Video,
   VideoOff,
   Mic,
@@ -65,11 +66,14 @@ interface CallParticipant {
 
 interface FamilyCartProps {
   cart: CartItem[];
+  personalCart?: CartItem[];
   members: Member[];
   currency: Currency;
   exchangeRates: ExchangeRates;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
+  onUpdatePersonalQuantity?: (itemId: string, quantity: number) => void;
   onClearCart: () => void;
+  onClearPersonalCart?: () => void;
   onClose?: () => void;
   onOpenWhatsAppSim?: () => void;
   onAddToCart?: (productId: string, memberId: string, note?: string) => void;
@@ -80,11 +84,14 @@ interface FamilyCartProps {
 
 export const FamilyCart: React.FC<FamilyCartProps> = ({
   cart,
+  personalCart = [],
   members,
   currency,
   exchangeRates,
   onUpdateQuantity,
+  onUpdatePersonalQuantity,
   onClearCart,
+  onClearPersonalCart,
   onClose,
   onOpenWhatsAppSim,
   onAddToCart,
@@ -101,6 +108,7 @@ export const FamilyCart: React.FC<FamilyCartProps> = ({
   // Profile Popup Modal state
   const [selectedMemberModal, setSelectedMemberModal] = useState<Member | null>(null);
   const [showInviteToast, setShowInviteToast] = useState<boolean>(false);
+  const [activeCartTab, setActiveCartTab] = useState<'personal' | 'family'>('personal');
 
   // --- LIVE GROUP VIDEO CALL STATE ---
   const [isVideoCallActive, setIsVideoCallActive] = useState<boolean>(false);
@@ -405,11 +413,24 @@ export const FamilyCart: React.FC<FamilyCartProps> = ({
     >
       {/* Top Header */}
       <div className="bg-[#0e2a47] text-white p-4 sm:p-5 border-b border-[#183b63] flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg sm:text-xl font-black tracking-wide text-[#ffb703]">
-              Family Cart: Moyo Group
-            </h2>
+        <div className="flex items-center gap-3">
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-1.5 text-blue-200 hover:text-white bg-white/10 hover:bg-white/20 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer mr-0.5"
+              title="Back to Store Catalog"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-4 h-4 text-cyan-300" />
+              <span>Back</span>
+            </button>
+          )}
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-black tracking-wide text-[#ffb703]">
+                Family Cart: Moyo Group
+              </h2>
             {isVideoCallActive ? (
               <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-400/40 uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -424,6 +445,7 @@ export const FamilyCart: React.FC<FamilyCartProps> = ({
           <p className="text-xs text-blue-200 mt-0.5">
             Global Collaborative Cross-Border Order ({cart.reduce((s, i) => s + i.quantity, 0)} Items)
           </p>
+        </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1033,8 +1055,138 @@ export const FamilyCart: React.FC<FamilyCartProps> = ({
             </div>
           </div>
 
-          {/* Cart Items List */}
-          {cart.length === 0 ? (
+          {/* Cart View Tabs: Personal Cart vs Family Cart */}
+          <div className="bg-white p-1.5 rounded-2xl border border-stone-200 flex items-center gap-2 shadow-2xs mb-4">
+            <button
+              onClick={() => setActiveCartTab('personal')}
+              className={`flex-1 py-2.5 px-4 rounded-xl font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                activeCartTab === 'personal'
+                  ? 'bg-[#0e2a47] text-white shadow-md'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4 text-[#ffb703]" />
+              <span>My Personal Cart ({personalCart.reduce((s, i) => s + i.quantity, 0)})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveCartTab('family')}
+              className={`flex-1 py-2.5 px-4 rounded-xl font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                activeCartTab === 'family'
+                  ? 'bg-[#0e2a47] text-white shadow-md'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              <Users className="w-4 h-4 text-emerald-400" />
+              <span>Family Shared Cart ({cart.reduce((s, i) => s + i.quantity, 0)})</span>
+            </button>
+          </div>
+
+          {/* Tab Content: Personal Cart */}
+          {activeCartTab === 'personal' ? (
+            personalCart.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-dashed border-stone-300 p-8 text-center space-y-3 shadow-xs">
+                <ShoppingBag className="w-10 h-10 text-stone-300 mx-auto" />
+                <h3 className="font-bold text-stone-700 text-base">Your Personal Cart is Empty</h3>
+                <p className="text-xs text-stone-500 max-w-sm mx-auto">
+                  Add items for your own personal order or move them to the Family Shared Cart anytime.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs text-stone-500 font-bold px-1">
+                  <span className="text-stone-700 font-extrabold">
+                    PERSONAL CART ITEMS ({personalCart.reduce((s, i) => s + i.quantity, 0)})
+                  </span>
+                  {onClearPersonalCart && (
+                    <button
+                      onClick={onClearPersonalCart}
+                      className="text-red-600 hover:text-red-700 flex items-center gap-1 text-[11px] font-bold"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Clear Personal Cart</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-2.5">
+                  {personalCart.map((item) => {
+                    const itemTotalUSD = item.product.priceUSD * item.quantity;
+                    return (
+                      <div
+                        key={item.id}
+                        className="bg-white rounded-2xl p-3 sm:p-4 border border-stone-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all hover:border-stone-300"
+                      >
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={getProductImagePath(item.product.image)}
+                            alt={item.product.name}
+                            onError={(e) => handleProductImageError(e, item.product.name, item.product.category)}
+                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border border-stone-200 bg-stone-100 flex-shrink-0"
+                          />
+                          <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h4 className="font-bold text-stone-900 text-sm leading-tight">
+                                {item.product.name}
+                              </h4>
+                              <span className="bg-cyan-100 text-cyan-800 text-[10px] font-bold px-2 py-0.5 rounded border border-cyan-200">
+                                Personal Item
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-xs text-stone-500 mt-0.5">
+                              <span>Unit: {item.product.unit}</span>
+                              <span>•</span>
+                              <span className="font-semibold text-stone-700">
+                                {formatCurrency(item.product.priceUSD)} each
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quantity controls & Subtotal */}
+                        <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t sm:border-t-0 pt-2 sm:pt-0 border-stone-100">
+                          <div className="flex items-center bg-stone-100 rounded-xl border border-stone-200 p-0.5">
+                            <button
+                              onClick={() => {
+                                if (onUpdatePersonalQuantity) {
+                                  onUpdatePersonalQuantity(item.id, item.quantity - 1);
+                                }
+                              }}
+                              className="p-1 hover:bg-white rounded-lg text-stone-700 transition-colors active:scale-95"
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="px-2.5 font-black text-xs text-stone-900">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => {
+                                if (onUpdatePersonalQuantity) {
+                                  onUpdatePersonalQuantity(item.id, item.quantity + 1);
+                                }
+                              }}
+                              className="p-1 hover:bg-white rounded-lg text-stone-700 transition-colors active:scale-95"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="text-right">
+                            <span className="text-[10px] text-stone-400 block font-semibold">Subtotal</span>
+                            <span className="font-black text-sm text-[#0e2a47]">
+                              {formatCurrency(itemTotalUSD)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )
+          ) : (
+            cart.length === 0 ? (
             <div className="bg-white rounded-2xl border border-dashed border-stone-300 p-8 text-center space-y-3 shadow-xs">
               <Users className="w-10 h-10 text-stone-300 mx-auto" />
               <h3 className="font-bold text-stone-700 text-base">Your Family Cart is Empty</h3>
@@ -1202,7 +1354,8 @@ export const FamilyCart: React.FC<FamilyCartProps> = ({
                 })}
               </div>
             </div>
-          )}
+          )
+        )}
 
           {/* Real-Time Split Payments Engine */}
           {cart.length > 0 && (
